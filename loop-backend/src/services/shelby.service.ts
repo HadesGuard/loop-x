@@ -5,6 +5,12 @@ import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { AppError } from '../middleware/error.middleware';
 
+const NETWORK_MAP: Record<string, Network> = {
+  shelbynet: Network.SHELBYNET,
+  testnet: Network.TESTNET,
+  mainnet: Network.MAINNET,
+};
+
 export class ShelbyService {
   private client: ShelbyNodeClient | null = null;
   private signer: Account | null = null;
@@ -15,10 +21,12 @@ export class ShelbyService {
       return;
     }
 
+    const network = NETWORK_MAP[env.SHELBY_NETWORK ?? 'shelbynet'];
     this.client = new ShelbyNodeClient({
-      network: Network.SHELBYNET,
+      network,
       apiKey: env.SHELBY_API_KEY,
     });
+    logger.info(`Shelby client initialized with network: ${env.SHELBY_NETWORK}`);
 
     // Initialize service account signer if private key is provided
     if (env.SHELBY_SERVICE_ACCOUNT_PRIVATE_KEY) {
