@@ -1,0 +1,578 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Core Tables
+// ============================================
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  username     String   @unique @db.VarChar(50)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  fullName     String?  @map("full_name") @db.VarChar(255)
+  avatarUrl    String?  @map("avatar_url") @db.Text
+  bio          String?  @db.Text
+  website      String?  @db.VarChar(255)
+  role         String   @default("user") @db.VarChar(20)
+  isVerified   Boolean  @default(false) @map("is_verified")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  videos               Video[]
+  videoLikes           VideoLike[]
+  videoSaves           VideoSave[]
+  comments             Comment[]
+  commentLikes         CommentLike[]
+  followers            Follow[]                  @relation("Follower")
+  following            Follow[]                  @relation("Following")
+  blocked              Block[]                   @relation("Blocker")
+  blockedBy            Block[]                   @relation("Blocked")
+  conversations        ConversationParticipant[]
+  sentMessages         Message[]
+  notifications        Notification[]            @relation("NotificationUser")
+  notificationsAsActor Notification[]            @relation("NotificationActor")
+  watchHistory         WatchHistory[]
+  reports              Report[]
+  oauthProviders       OAuthProvider[]
+  refreshTokens        RefreshToken[]
+  userAnalytics        UserAnalytics[]
+  sounds               Sound[]
+  soundFavorites       SoundFavorite[]
+  privacySettings      UserPrivacySettings?
+  uploadSessions       UploadSession[]
+
+  @@index([username])
+  @@index([email])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Video {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  url           String   @db.Text
+  thumbnailUrl  String?  @map("thumbnail_url") @db.Text
+  title         String   @db.VarChar(100)
+  description   String?  @db.Text
+  views         BigInt   @default(0)
+  likesCount    Int      @default(0) @map("likes_count")
+  commentsCount Int      @default(0) @map("comments_count")
+  sharesCount   Int      @default(0) @map("shares_count")
+  duration      Int? // seconds
+  fileSize      BigInt?  @map("file_size") // bytes
+  privacy       String   @default("public") @db.VarChar(20)
+  allowComments Boolean  @default(true) @map("allow_comments")
+  allowDuet     Boolean  @default(true) @map("allow_duet")
+  allowStitch   Boolean  @default(true) @map("allow_stitch")
+  duetsCount    Int      @default(0) @map("duets_count")
+  stitchesCount Int      @default(0) @map("stitches_count")
+  status        String   @default("processing") @db.VarChar(20)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // HLS streaming
+  hlsManifestUrl String? @map("hls_manifest_url") @db.Text
+
+  // Shelby storage fields
+  shelbyAccount    String? @map("shelby_account") @db.VarChar(255)
+  shelbyBlobName   String? @map("shelby_blob_name") @db.VarChar(255)
+  shelbyMerkleRoot String? @map("shelby_merkle_root") @db.VarChar(255)
+  shelbyExpiration BigInt? @map("shelby_expiration")
+  shelbySize       BigInt? @map("shelby_size")
+  shelbyChunksets  Int?    @map("shelby_chunksets")
+
+  // Relations
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoLikes     VideoLike[]
+  videoSaves     VideoSave[]
+  comments       Comment[]
+  videoHashtags  VideoHashtag[]
+  watchHistory   WatchHistory[]
+  notifications  Notification[]
+  reports        Report[]
+  videoAnalytics VideoAnalytics[]
+  videoSounds    VideoSound[]
+  videoRelations VideoRelation[]  @relation("OriginalVideo")
+  relatedVideos  VideoRelation[]  @relation("RelatedVideo")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([privacy])
+  @@index([status])
+  @@index([shelbyAccount])
+  @@index([shelbyBlobName])
+  @@map("videos")
+}
+
+model VideoHashtag {
+  id        String   @id @default(uuid()) @db.Uuid
+  videoId   String   @map("video_id") @db.Uuid
+  hashtag   String   @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  video      Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  hashtagRef Hashtag @relation(fields: [hashtag], references: [tag], onDelete: Cascade)
+
+  @@unique([videoId, hashtag])
+  @@index([videoId])
+  @@index([hashtag])
+  @@map("video_hashtags")
+}
+
+model Hashtag {
+  tag         String   @id @db.VarChar(100)
+  views       BigInt   @default(0)
+  videosCount Int      @default(0) @map("videos_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  videoHashtags VideoHashtag[]
+
+  @@index([views])
+  @@index([videosCount])
+  @@map("hashtags")
+}
+
+model VideoLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  videoId   String   @map("video_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+  @@index([createdAt])
+  @@map("video_likes")
+}
+
+model VideoSave {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  videoId   String   @map("video_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+  @@map("video_saves")
+}
+
+model Comment {
+  id           String   @id @default(uuid()) @db.Uuid
+  videoId      String   @map("video_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  parentId     String?  @map("parent_id") @db.Uuid
+  text         String   @db.Text
+  likesCount   Int      @default(0) @map("likes_count")
+  repliesCount Int      @default(0) @map("replies_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  video         Video          @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent        Comment?       @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[]      @relation("CommentReplies")
+  commentLikes  CommentLike[]
+  notifications Notification[]
+
+  @@index([videoId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+model CommentLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  commentId String   @map("comment_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@index([userId])
+  @@index([commentId])
+  @@map("comment_likes")
+}
+
+model Follow {
+  id          String   @id @default(uuid()) @db.Uuid
+  followerId  String   @map("follower_id") @db.Uuid
+  followingId String   @map("following_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+model Block {
+  id        String   @id @default(uuid()) @db.Uuid
+  blockerId String   @map("blocker_id") @db.Uuid
+  blockedId String   @map("blocked_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+// ============================================
+// Messaging
+// ============================================
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([updatedAt])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  unreadCount    Int       @default(0) @map("unread_count")
+  lastReadAt     DateTime? @map("last_read_at")
+  joinedAt       DateTime  @default(now()) @map("joined_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  senderId       String   @map("sender_id") @db.Uuid
+  text           String   @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// ============================================
+// Notifications & History
+// ============================================
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String   @db.VarChar(20)
+  actorId   String   @map("actor_id") @db.Uuid
+  videoId   String?  @map("video_id") @db.Uuid
+  commentId String?  @map("comment_id") @db.Uuid
+  message   String?  @db.Text
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User     @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+  actor   User     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  video   Video?   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model WatchHistory {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  videoId         String   @map("video_id") @db.Uuid
+  watchedDuration Int?     @map("watched_duration") // seconds
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+  @@index([createdAt])
+  @@map("watch_history")
+}
+
+// ============================================
+// Reports & Moderation
+// ============================================
+
+model Report {
+  id          String    @id @default(uuid()) @db.Uuid
+  reporterId  String    @map("reporter_id") @db.Uuid
+  type        String    @db.VarChar(20)
+  targetId    String    @map("target_id") @db.Uuid
+  reason      String    @db.VarChar(50)
+  description String?   @db.Text
+  status      String    @default("pending") @db.VarChar(20)
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  reviewedAt  DateTime? @map("reviewed_at")
+  reviewedBy  String?   @map("reviewed_by") @db.Uuid
+
+  reporter User    @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  // Note: targetId can be user_id, video_id, or comment_id depending on type
+  // Video relation only applies when type = 'video'
+  Video    Video?  @relation(fields: [videoId], references: [id])
+  videoId  String? @db.Uuid
+
+  @@index([reporterId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("reports")
+}
+
+// ============================================
+// Authentication
+// ============================================
+
+model OAuthProvider {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  provider       String   @db.VarChar(20)
+  providerUserId String   @map("provider_user_id") @db.VarChar(255)
+  accessToken    String?  @map("access_token") @db.Text
+  refreshToken   String?  @map("refresh_token") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@index([provider])
+  @@map("oauth_providers")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique @db.Text
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ============================================
+// Analytics
+// ============================================
+
+model VideoAnalytics {
+  id        String   @id @default(uuid()) @db.Uuid
+  videoId   String   @map("video_id") @db.Uuid
+  date      DateTime @db.Date
+  views     Int      @default(0)
+  likes     Int      @default(0)
+  comments  Int      @default(0)
+  shares    Int      @default(0)
+  watchTime BigInt   @default(0) @map("watch_time") // seconds
+  createdAt DateTime @default(now()) @map("created_at")
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, date])
+  @@index([videoId])
+  @@index([date])
+  @@map("video_analytics")
+}
+
+model UserAnalytics {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  date            DateTime @db.Date
+  followersGained Int      @default(0) @map("followers_gained")
+  followersLost   Int      @default(0) @map("followers_lost")
+  views           Int      @default(0)
+  likes           Int      @default(0)
+  comments        Int      @default(0)
+  shares          Int      @default(0)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@map("user_analytics")
+}
+
+// ============================================
+// Sounds & Music
+// ============================================
+
+model Sound {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  title        String   @db.VarChar(100)
+  artist       String?  @db.VarChar(255)
+  duration     Int      // seconds
+  url          String   @db.Text
+  thumbnailUrl String?  @map("thumbnail_url") @db.Text
+  genre        String?  @db.VarChar(50)
+  description  String?  @db.Text
+  tags         String[] // Array of tags
+  totalVideos  Int      @default(0) @map("total_videos")
+  totalViews   BigInt   @default(0) @map("total_views")
+  totalLikes   Int      @default(0) @map("total_likes")
+  isOriginal   Boolean  @default(false) @map("is_original")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoSounds    VideoSound[]
+  soundFavorites SoundFavorite[]
+
+  @@index([userId])
+  @@index([genre])
+  @@index([createdAt])
+  @@index([isOriginal])
+  @@map("sounds")
+}
+
+model VideoSound {
+  id              String   @id @default(uuid()) @db.Uuid
+  videoId         String   @map("video_id") @db.Uuid
+  soundId         String   @map("sound_id") @db.Uuid
+  startTime       Int      @default(0) @map("start_time") // Start time in sound (seconds)
+  volume          Int      @default(100) // 0-100
+  useOriginalAudio Boolean  @default(false) @map("use_original_audio")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  sound Sound @relation(fields: [soundId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, soundId])
+  @@index([videoId])
+  @@index([soundId])
+  @@map("video_sounds")
+}
+
+model SoundFavorite {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  soundId   String   @map("sound_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sound Sound @relation(fields: [soundId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, soundId])
+  @@index([userId])
+  @@index([soundId])
+  @@map("sound_favorites")
+}
+
+// ============================================
+// Duet & Stitch
+// ============================================
+
+model VideoRelation {
+  id              String   @id @default(uuid()) @db.Uuid
+  videoId         String   @map("video_id") @db.Uuid
+  relatedVideoId String   @map("related_video_id") @db.Uuid
+  relationType   String   @db.VarChar(20) // 'duet' or 'stitch'
+  metadata       Json?    // Store position, alignment, clip times, etc.
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  video        Video @relation("OriginalVideo", fields: [videoId], references: [id], onDelete: Cascade)
+  relatedVideo Video @relation("RelatedVideo", fields: [relatedVideoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@index([relatedVideoId])
+  @@index([relationType])
+  @@map("video_relations")
+}
+
+// ============================================
+// Privacy Settings
+// ============================================
+
+model UserPrivacySettings {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  profileVisibility String   @default("public") @map("profile_visibility") @db.VarChar(20) // public, private
+  allowMessages     String   @default("everyone") @map("allow_messages") @db.VarChar(20) // everyone, followers, none
+  allowComments     Boolean  @default(true) @map("allow_comments")
+  allowDuet         Boolean  @default(true) @map("allow_duet")
+  allowStitch       Boolean  @default(true) @map("allow_stitch")
+  showActivityStatus Boolean @default(true) @map("show_activity_status")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_privacy_settings")
+}
+
+model UploadSession {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  fileName       String   @map("file_name") @db.VarChar(255)
+  fileSize       BigInt   @map("file_size")
+  mimeType       String   @map("mime_type") @db.VarChar(100)
+  chunkSize      Int      @default(5242880) @map("chunk_size") // 5MB
+  totalChunks    Int      @map("total_chunks")
+  uploadedChunks Int      @default(0) @map("uploaded_chunks")
+  status         String   @default("pending") @db.VarChar(20) // pending, uploading, complete, expired
+  metadata       Json?    // title, description, privacy, etc.
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("upload_sessions")
+}

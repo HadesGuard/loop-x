@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: loop-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-loop_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-loop_password}
+      POSTGRES_DB: ${POSTGRES_DB:-loop_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loop_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - loop-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: loop-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - loop-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  loop-network:
+    driver: bridge
+
