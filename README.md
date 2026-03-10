@@ -7,7 +7,6 @@ A TikTok-style video social media platform built with the [Shelby protocol](http
 ```
 loop-backend/    Express.js + TypeScript API (port 3001)
 loop-ui/         Next.js + React frontend (port 3000)
-docs/            Shelby protocol documentation
 ```
 
 ### Backend
@@ -93,7 +92,7 @@ pnpm build            # Production build
 
 ## API Specs
 
-- [REST API](loop-backend/API_SPECS.md)
-- [WebSocket Events](loop-backend/WEBSOCKET_SPECS.md)
-- [Video Processing](loop-backend/VIDEO_PROCESSING_SPECS.md)
-- [Shelby Integration](loop-backend/SHELBY_STORAGE_INTEGRATION.md)
+- [REST API](loop-backend/docs/api-specs.md)
+- [WebSocket Events](loop-backend/docs/websocket-specs.md)
+- [Video Processing](loop-backend/docs/video-processing.md)
+- [Shelby Integration](loop-backend/docs/shelby-integration.md)

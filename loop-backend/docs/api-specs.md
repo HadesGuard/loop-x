@@ -320,13 +320,13 @@ Unfollow a user.
 
 ## Video Management
 
-> **Note**: For detailed video upload flow with Shelby Network, see [SHELBY_STORAGE_INTEGRATION.md](./SHELBY_STORAGE_INTEGRATION.md).  
-> For video processing pipeline details, see [VIDEO_PROCESSING_SPECS.md](./VIDEO_PROCESSING_SPECS.md).
+> **Note**: For detailed video upload flow with Shelby Network, see [shelby-integration.md](./shelby-integration.md).  
+> For video processing pipeline details, see [video-processing.md](./video-processing.md).
 
 ### POST /videos
 Upload a new video.
 
-**Storage**: Videos are stored on Shelby Network (decentralized storage). See [SHELBY_STORAGE_INTEGRATION.md](./SHELBY_STORAGE_INTEGRATION.md) for implementation details.
+**Storage**: Videos are stored on Shelby Network (decentralized storage). See [shelby-integration.md](./shelby-integration.md) for implementation details.
 
 **Headers:**
 - `Authorization: Bearer {token}`
@@ -1007,7 +1007,7 @@ Unfollow a hashtag.
 
 ## Sounds & Music
 
-> **Note**: For complete sound/music API documentation, see [SOUND_MUSIC_API.md](./SOUND_MUSIC_API.md).
+> **Note**: For complete sound/music API documentation, see [sound-music-api.md](./sound-music-api.md).
 
 ### GET /sounds
 Get list of sounds/music tracks.
@@ -1076,7 +1076,7 @@ Upload a new sound/music track.
 }
 ```
 
-> See [SOUND_MUSIC_API.md](./SOUND_MUSIC_API.md) for complete sound API documentation.
+> See [sound-music-api.md](./sound-music-api.md) for complete sound API documentation.
 
 ---
 

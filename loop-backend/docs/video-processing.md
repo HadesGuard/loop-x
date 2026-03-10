@@ -344,7 +344,7 @@ Upload custom thumbnail.
 - **Expiration**: 30-90 days (configurable)
 - **Verification**: Merkle root on-chain
 
-See [SHELBY_STORAGE_INTEGRATION.md](./SHELBY_STORAGE_INTEGRATION.md) for detailed integration guide.
+See [shelby-integration.md](./shelby-integration.md) for detailed integration guide.
 
 ### CDN Configuration
 

@@ -80,10 +80,10 @@ Next.js app router with Tailwind CSS v4 and shadcn/ui components.
 
 ## Shelby Documentation
 
-Pre-fetched Shelby docs are in `docs/` — read from there first before fetching online:
-- `docs/shelby-full-docs.txt` — Complete documentation
-- `docs/typescript-sdk.md` — TypeScript SDK reference
-- `docs/protocol-quickstart.md` — Protocol quickstart
+Pre-fetched Shelby docs are in `loop-backend/docs/shelby/` — read from there first before fetching online:
+- `loop-backend/docs/shelby/shelby-full-docs.txt` — Complete documentation
+- `loop-backend/docs/shelby/typescript-sdk.md` — TypeScript SDK reference
+- `loop-backend/docs/shelby/protocol-quickstart.md` — Protocol quickstart
 
 ## Environment Setup
 
@@ -97,10 +97,10 @@ Frontend uses `.env.local` with `NEXT_PUBLIC_API_URL=http://localhost:3001`.
 
 ## Key Specs
 
-- `loop-backend/API_SPECS.md` — Full REST API specification
-- `loop-backend/WEBSOCKET_SPECS.md` — WebSocket events
-- `loop-backend/VIDEO_PROCESSING_SPECS.md` — Video pipeline details
-- `loop-backend/SHELBY_STORAGE_INTEGRATION.md` — Shelby protocol integration
+- `loop-backend/docs/api-specs.md` — Full REST API specification
+- `loop-backend/docs/websocket-specs.md` — WebSocket events
+- `loop-backend/docs/video-processing.md` — Video pipeline details
+- `loop-backend/docs/shelby-integration.md` — Shelby protocol integration
 
 ---
 
@@ -112,7 +112,7 @@ IMPORTANT: Always follow these rules automatically when performing the correspon
 
 When creating or adding a new backend API endpoint, ALWAYS scaffold the full stack:
 
-1. **Check specs first** — Read `loop-backend/API_SPECS.md` to see if the endpoint is already specified
+1. **Check specs first** — Read `loop-backend/docs/api-specs.md` to see if the endpoint is already specified
 2. **Read existing patterns** — Use `video` as the reference implementation:
    - `src/routes/video.routes.ts` → route pattern
    - `src/controllers/video.controller.ts` → controller pattern
@@ -160,8 +160,8 @@ When writing backend tests:
 
 When working with Shelby features:
 
-1. **Always read local docs first** — `docs/shelby-full-docs.txt`, `docs/typescript-sdk.md`, `docs/protocol-quickstart.md`
-2. Read current implementation: `src/services/shelby.service.ts` and `SHELBY_STORAGE_INTEGRATION.md`
+1. **Always read local docs first** — `loop-backend/docs/shelby/shelby-full-docs.txt`, `loop-backend/docs/shelby/typescript-sdk.md`, `loop-backend/docs/shelby/protocol-quickstart.md`
+2. Read current implementation: `src/services/shelby.service.ts` and `loop-backend/docs/shelby-integration.md`
 3. Follow existing `shelby.service.ts` patterns
 4. SDK package: `@shelby-protocol/sdk`
 

@@ -305,7 +305,7 @@ WS_PORT=3001
 **Implementation Roadmap**: [IMPLEMENTATION_ROADMAP.md](./IMPLEMENTATION_ROADMAP.md) 🚀
 
 **Core Docs**:
-- [API_SPECS.md](./API_SPECS.md) - API reference
+- [api-specs.md](./docs/api-specs.md) - API reference
 - [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) - Database schema
 - [ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md) - Config reference
 
@@ -313,12 +313,12 @@ WS_PORT=3001
 - [VPS_SETUP_GUIDE.md](./VPS_SETUP_GUIDE.md) - VPS setup guide
 
 **Features**:
-- [SHELBY_STORAGE_INTEGRATION.md](./SHELBY_STORAGE_INTEGRATION.md) - Video storage, upload/download flow, payment
-- [VIDEO_PROCESSING_SPECS.md](./VIDEO_PROCESSING_SPECS.md) - Video processing
+- [shelby-integration.md](./docs/shelby-integration.md) - Video storage, upload/download flow, payment
+- [video-processing.md](./docs/video-processing.md) - Video processing
 - [WALLET_AUTH_INTEGRATION.md](./WALLET_AUTH_INTEGRATION.md) - Wallet auth
-- [SOUND_MUSIC_API.md](./SOUND_MUSIC_API.md) - Sounds API
-- [DUET_STITCH_API.md](./DUET_STITCH_API.md) - Duet/Stitch
-- [WEBSOCKET_SPECS.md](./WEBSOCKET_SPECS.md) - Real-time
+- [sound-music-api.md](./docs/sound-music-api.md) - Sounds API
+- [duet-stitch-api.md](./docs/duet-stitch-api.md) - Duet/Stitch
+- [websocket-specs.md](./docs/websocket-specs.md) - Real-time
 
 **Index**: [DOCS_INDEX.md](./DOCS_INDEX.md) - All docs navigation
 
