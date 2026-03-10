@@ -2,7 +2,7 @@
 
 ## Overview
 
-Loop backend sử dụng **Shelby Network** làm decentralized storage cho videos, thay vì AWS S3. Shelby là một blockchain-based storage network built trên Aptos.
+Loop backend uses **Shelby Network** as decentralized storage for videos, instead of AWS S3. Shelby is a blockchain-based storage network built on Aptos.
 
 ---
 
@@ -10,12 +10,12 @@ Loop backend sử dụng **Shelby Network** làm decentralized storage cho video
 
 ### Key Concepts
 
-1. **Blob**: File được lưu trữ trên Shelby network
-2. **Blob Name**: Unique identifier cho blob trong account
-3. **Commitments**: Hash commitments cho data verification
-4. **Merkle Root**: Root hash của blob merkle tree
-5. **Account-based Storage**: Mỗi account có thể lưu nhiều blobs
-6. **Expiration**: Blobs có expiration time (microseconds)
+1. **Blob**: A file stored on the Shelby network
+2. **Blob Name**: Unique identifier for a blob within an account
+3. **Commitments**: Hash commitments for data verification
+4. **Merkle Root**: Root hash of the blob merkle tree
+5. **Account-based Storage**: Each account can store multiple blobs
+6. **Expiration**: Blobs have an expiration time (microseconds)
 
 ### Storage Flow
 
@@ -28,7 +28,7 @@ Loop backend sử dụng **Shelby Network** làm decentralized storage cho video
 
 ---
 
-## Video Upload với Shelby
+## Video Upload with Shelby
 
 ### Step 1: Encode Video File
 
@@ -109,8 +109,8 @@ await shelbyClient.rpc.putBlob({
 
 ```sql
 -- Update videos table
-UPDATE videos 
-SET 
+UPDATE videos
+SET
   shelby_account = 'account_address',
   shelby_blob_name = 'video_123.mp4',
   shelby_merkle_root = 'merkle_root_hash',
@@ -185,16 +185,16 @@ export async function uploadVideoToShelby(
     sender: signer.accountAddress,
     data: payload,
   });
-  
+
   const signedTransaction = await client.aptos.transaction.sign({
     signer,
     transaction,
   });
-  
+
   const submitted = await client.aptos.transaction.submit.simple({
     transaction: signedTransaction,
   });
-  
+
   await client.aptos.waitForTransaction({
     transactionHash: submitted.hash,
   });
@@ -236,7 +236,7 @@ export async function downloadVideoFromShelby(
   });
 
   const account = AccountAddress.fromString(accountAddress);
-  
+
   // Get readable stream
   const { readable } = await client.download({
     account,
@@ -267,7 +267,7 @@ Stream video from Shelby.
 ```typescript
 router.get('/videos/:id/stream', async (req, res) => {
   const { id } = req.params;
-  
+
   // Get video from database
   const video = await Video.findByPk(id);
   if (!video) {
@@ -283,7 +283,7 @@ router.get('/videos/:id/stream', async (req, res) => {
   // Set headers
   res.setHeader('Content-Type', 'video/mp4');
   res.setHeader('Content-Disposition', `inline; filename="${video.title}.mp4"`);
-  
+
   // Stream video
   const nodeStream = Readable.fromWeb(stream as ReadableStream<Uint8Array>);
   nodeStream.pipe(res);
@@ -332,12 +332,12 @@ interface VideoStorage {
 
 ### Service Account Strategy
 
-Có 2 cách quản lý accounts:
+There are 2 ways to manage accounts:
 
 #### Option 1: Single Service Account (Recommended for MVP)
-- Một service account cho tất cả videos
-- Đơn giản, dễ quản lý
-- Tất cả videos thuộc về service account
+- One service account for all videos
+- Simple, easy to manage
+- All videos belong to the service account
 
 ```typescript
 // .env
@@ -346,9 +346,9 @@ SHELBY_SERVICE_ACCOUNT_ADDRESS=service_account_address
 ```
 
 #### Option 2: Per-User Accounts (Advanced)
-- Mỗi user có account riêng
-- Videos thuộc về user account
-- Phức tạp hơn nhưng decentralized hơn
+- Each user has their own account
+- Videos belong to the user account
+- More complex but more decentralized
 
 ```sql
 -- Add to users table
@@ -361,7 +361,7 @@ ADD COLUMN shelby_account_private_key_encrypted TEXT; -- Encrypted
 
 ## Thumbnail Storage
 
-Thumbnails cũng có thể lưu trên Shelby:
+Thumbnails can also be stored on Shelby:
 
 ```typescript
 // Upload thumbnail
@@ -373,13 +373,13 @@ await client.upload({
 });
 ```
 
-Hoặc dùng traditional storage (S3) cho thumbnails vì nhỏ hơn.
+Or use traditional storage (S3) for thumbnails since they are smaller.
 
 ---
 
 ## Sound Storage
 
-Sounds cũng lưu trên Shelby:
+Sounds are also stored on Shelby:
 
 ```typescript
 await client.upload({
@@ -408,15 +408,15 @@ export async function listUserVideos(accountAddress: string) {
   });
 
   const account = AccountAddress.fromString(accountAddress);
-  
+
   // Get all blobs from account
   const blobs = await client.coordination.getAccountBlobs({ account });
-  
+
   // Filter video blobs
-  const videoBlobs = blobs.filter(blob => 
+  const videoBlobs = blobs.filter(blob =>
     blob.name.startsWith('video_') && blob.name.endsWith('.mp4')
   );
-  
+
   return videoBlobs;
 }
 ```
@@ -427,7 +427,7 @@ export async function listUserVideos(accountAddress: string) {
 
 ### Auto-Renewal
 
-Videos cần được renew trước khi expire:
+Videos need to be renewed before they expire:
 
 ```typescript
 // Cron job to renew expiring videos
@@ -443,7 +443,7 @@ export async function renewExpiringVideos() {
   for (const video of expiringVideos) {
     // Renew blob
     await renewShelbyBlob(video.shelbyAccount, video.shelbyBlobName, 30 * 24 * 60 * 60 * 1000 * 1000);
-    
+
     // Update database
     video.shelbyExpiration = Date.now() * 1000 + 30 * 24 * 60 * 60 * 1000 * 1000;
     await video.save();
@@ -499,7 +499,7 @@ SPONSOR_PRIVATE_KEY=sponsor_account_private_key
 
 ---
 
-## Migration từ S3 sang Shelby
+## Migration from S3 to Shelby
 
 ### Migration Strategy
 
@@ -513,10 +513,10 @@ SPONSOR_PRIVATE_KEY=sponsor_account_private_key
 export async function migrateVideoToShelby(videoId: string) {
   // 1. Download from S3
   const s3Video = await downloadFromS3(videoId);
-  
+
   // 2. Upload to Shelby
   const shelbyInfo = await uploadVideoToShelby(s3Video, videoId);
-  
+
   // 3. Update database
   await Video.update(
     {
@@ -527,7 +527,7 @@ export async function migrateVideoToShelby(videoId: string) {
     },
     { where: { id: videoId } }
   );
-  
+
   // 4. (Optional) Delete from S3 after verification
 }
 ```
@@ -592,12 +592,11 @@ Get Shelby storage information.
 
 ## Conclusion
 
-Shelby Network cung cấp:
+Shelby Network provides:
 - ✅ Decentralized storage
 - ✅ Blockchain-based verification
 - ✅ Account-based organization
 - ✅ Cost-effective storage
-- ✅ Integration với Aptos ecosystem
+- ✅ Integration with Aptos ecosystem
 
-Loop backend sẽ sử dụng Shelby làm primary storage cho videos, sounds, và thumbnails.
-
+Loop backend uses Shelby as primary storage for videos, sounds, and thumbnails.

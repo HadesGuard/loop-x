@@ -18,10 +18,10 @@ Loop is a short-form video sharing platform where users can:
 
 ### Core Backend
 - **Language**: **Node.js (TypeScript)**
-  - ✅ Type safety với TypeScript
+  - ✅ Type safety with TypeScript
   - ✅ Large ecosystem
-  - ✅ Easy integration với Shelby SDK
-  - ✅ Good performance cho I/O operations
+  - ✅ Easy integration with Shelby SDK
+  - ✅ Good performance for I/O operations
 
 - **Framework**: **Express.js**
   - ✅ Simple, lightweight
@@ -33,7 +33,7 @@ Loop is a short-form video sharing platform where users can:
   - ✅ Reliable, ACID compliant
   - ✅ Good performance
   - ✅ Full-text search built-in
-  - ✅ Free (self-hosted hoặc managed như Supabase/Neon)
+  - ✅ Free (self-hosted or managed like Supabase/Neon)
 
 - **Cache**: **Redis**
   - ✅ Fast in-memory cache
@@ -46,12 +46,12 @@ Loop is a short-form video sharing platform where users can:
   - ✅ Decentralized storage
   - ✅ Blockchain-based verification
   - ✅ Cost-effective
-  - ✅ Integrated với Aptos ecosystem
+  - ✅ Integrated with Aptos ecosystem
 
 - **Video Processing**: **FFmpeg** (self-hosted)
   - ✅ Free, open-source
   - ✅ Powerful transcoding
-  - ✅ Run on same server hoặc separate worker
+  - ✅ Run on same server or separate worker
 
 - **CDN**: **Cloudflare** (Free tier)
   - ✅ Free CDN
@@ -73,8 +73,8 @@ Loop is a short-form video sharing platform where users can:
 
 ### Infrastructure (VPS Self-Hosted)
 - **Hosting**: **VPS** (DigitalOcean, Hetzner, Vultr - $10-15/month)
-- **Database**: **PostgreSQL** (Docker container hoặc local)
-- **Redis**: **Redis** (Docker container hoặc local)
+- **Database**: **PostgreSQL** (Docker container or local)
+- **Redis**: **Redis** (Docker container or local)
 - **Process Manager**: **PM2**
 - **Reverse Proxy**: **Nginx**
 - **SSL**: **Let's Encrypt** (free)
@@ -82,8 +82,8 @@ Loop is a short-form video sharing platform where users can:
 ### Monitoring & Logging
 - **Error Tracking**: **Sentry** (free tier)
 - **Logging**: **Winston** + **Console** (simple)
-- **Monitoring**: **Uptime Robot** (free) hoặc **Better Uptime**
-- **Analytics**: Custom analytics trong database
+- **Monitoring**: **Uptime Robot** (free) or **Better Uptime**
+- **Analytics**: Custom analytics in database
 
 ### Message Queue (Simple)
 - **Redis** (for simple queues)
@@ -181,7 +181,7 @@ pnpm install
 **Option 1: Auto-generate (Recommended)**
 ```bash
 pnpm run setup:env
-# Hoặc
+# Or
 ./scripts/generate-env.sh
 ```
 
@@ -325,14 +325,14 @@ WS_PORT=3001
 ## Key Features
 
 ### 1. Authentication
-- **Email/Password** - Primary method (users không cần wallet)
+- **Email/Password** - Primary method (users don't need a wallet)
 - **OAuth (Google, Apple)** - Quick login
 - **Wallet Auth** - Optional feature (advanced users)
 - JWT-based authentication
 - Refresh tokens
 - Password reset
 
-**Note**: Users KHÔNG cần wallet vì backend trả tiền cho uploads. Wallet auth là optional feature.
+**Note**: Users DON'T need a wallet because the backend pays for uploads. Wallet auth is an optional feature.
 
 ### 2. Video Management
 - Video upload with multipart/form-data
@@ -400,10 +400,10 @@ pnpm run migrate        # Run migrations
 
 ### Prerequisites
 
-- VPS với Ubuntu 22.04 LTS (hoặc Debian 12)
+- VPS with Ubuntu 22.04 LTS (or Debian 12)
 - SSH access
 - Domain name (optional, for HTTPS)
-- Root hoặc sudo access
+- Root or sudo access
 
 ### Step 1: Initial VPS Setup
 
@@ -707,7 +707,7 @@ htop
 
 ## Docker Compose Setup (Alternative)
 
-Nếu muốn chạy tất cả trong Docker:
+If you want to run everything in Docker:
 
 ```bash
 # Start all services
