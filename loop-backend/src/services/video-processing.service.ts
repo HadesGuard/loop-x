@@ -383,8 +383,8 @@ export class VideoProcessingService {
       throw new AppError('Video not uploaded to Shelby', 400, 'VIDEO_NOT_ON_SHELBY');
     }
 
-    if (video.status !== 'uploading') {
-      throw new AppError('Video is not in uploading status', 400, 'INVALID_STATUS');
+    if (video.status !== 'uploading' && video.status !== 'processing') {
+      throw new AppError('Video is not in uploading or processing status', 400, 'INVALID_STATUS');
     }
 
     // Download from Shelby
