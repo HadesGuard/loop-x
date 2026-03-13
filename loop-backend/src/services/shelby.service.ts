@@ -1,5 +1,5 @@
 // @ts-ignore - Shelby SDK subpath exports not resolved with moduleResolution: "node"
-import { ShelbyNodeClient } from '@shelby-protocol/sdk/node';
+import { ShelbyNodeClient, generateCommitments, ClayErasureCodingProvider, defaultErasureCodingConfig } from '@shelby-protocol/sdk/node';
 import { Account, Ed25519PrivateKey, Network, AccountAddress } from '@aptos-labs/ts-sdk';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
@@ -14,6 +14,7 @@ const NETWORK_MAP: Record<string, Network> = {
 export class ShelbyService {
   private client: ShelbyNodeClient | null = null;
   private signer: Account | null = null;
+  private warmupDone = false;
 
   constructor() {
     if (!env.SHELBY_API_KEY) {
@@ -21,12 +22,10 @@ export class ShelbyService {
       return;
     }
 
-    const network = NETWORK_MAP[env.SHELBY_NETWORK ?? 'shelbynet'];
-    this.client = new ShelbyNodeClient({
-      network,
-      apiKey: env.SHELBY_API_KEY,
-    });
-    logger.info(`Shelby client initialized with network: ${env.SHELBY_NETWORK}`);
+    const networkName = env.SHELBY_NETWORK ?? 'testnet';
+    const network = NETWORK_MAP[networkName] ?? Network.TESTNET;
+    this.client = new ShelbyNodeClient({ network, apiKey: env.SHELBY_API_KEY });
+    logger.info(`Shelby client initialized with network: ${networkName}`);
 
     // Initialize service account signer if private key is provided
     if (env.SHELBY_SERVICE_ACCOUNT_PRIVATE_KEY) {
@@ -38,6 +37,36 @@ export class ShelbyService {
       } catch (error) {
         logger.error('Failed to initialize Shelby service account:', error);
       }
+    }
+
+    // Warm up WASM erasure coding provider (first use produces incorrect results)
+    this.warmup();
+  }
+
+  /**
+   * Warm up the WASM erasure coding provider to avoid first-upload failure.
+   * SDK bug: the first generateCommitments call after WASM init produces
+   * incorrect merkle roots, causing the upload complete step to fail.
+   */
+  private async warmup(): Promise<void> {
+    if (!this.client) return;
+    try {
+      // Use the SDK client's internal provider so the warmup affects
+      // the same singleton that client.upload() will use later.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const provider = await (this.client as any).getProvider();
+      const dummyData = new Uint8Array(16);
+      await generateCommitments(provider, dummyData);
+      this.warmupDone = true;
+      logger.info('Shelby WASM provider warmed up');
+    } catch (error) {
+      logger.warn('Shelby WASM warmup failed (uploads may fail on first attempt):', error);
+    }
+  }
+
+  private async ensureWarmedUp(): Promise<void> {
+    if (!this.warmupDone && this.client) {
+      await this.warmup();
     }
   }
 
@@ -60,7 +89,9 @@ export class ShelbyService {
       throw new AppError('Shelby service account not configured', 500, 'SHELBY_NOT_CONFIGURED');
     }
 
-    const expirationMicros = (Date.now() + expirationDays * 24 * 60 * 60 * 1000) * 1000;
+    await this.ensureWarmedUp();
+
+    const expirationMicros = BigInt((Date.now() + expirationDays * 24 * 60 * 60 * 1000) * 1000);
 
     try {
       await this.client.upload({
@@ -117,6 +148,8 @@ export class ShelbyService {
     if (!this.signer || !this.client) {
       throw new AppError('Shelby service account not configured', 500, 'SHELBY_NOT_CONFIGURED');
     }
+
+    await this.ensureWarmedUp();
 
     const blobName = `video_${videoId}.mp4`;
     const expirationMicros = BigInt((Date.now() + expirationDays * 24 * 60 * 60 * 1000) * 1000);

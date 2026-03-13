@@ -9,7 +9,13 @@ async function main() {
   const address = AccountAddress.fromString(process.env.SHELBY_SERVICE_ACCOUNT_ADDRESS!);
   console.log(`Checking balance for: ${address.toString()}`);
 
-  const config = new AptosConfig({ network: Network.SHELBYNET });
+  const config = new AptosConfig({
+    fullnode: 'https://api.testnet.aptoslabs.com/v1',
+    network: Network.TESTNET,
+    clientConfig: {
+      API_KEY: process.env.SHELBY_API_KEY!,
+    },
+  });
   const aptos = new Aptos(config);
 
   try {

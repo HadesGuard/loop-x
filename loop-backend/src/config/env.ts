@@ -13,7 +13,7 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('24h'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
-  SHELBY_NETWORK: z.enum(['shelbynet', 'testnet', 'mainnet']).default('shelbynet'),
+  SHELBY_NETWORK: z.enum(['shelbynet', 'testnet', 'mainnet']).default('testnet'),
   SHELBY_API_KEY: z.string().optional(),
   SHELBY_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
   SHELBY_SERVICE_ACCOUNT_ADDRESS: z.string().optional(),
