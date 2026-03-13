@@ -8,9 +8,39 @@ import './globals.css'
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://loop.app'
+
 export const metadata: Metadata = {
-  title: 'Loop',
-  description: 'Short-form video platform',
+  metadataBase: new URL(APP_URL),
+  title: {
+    default: 'Loop',
+    template: '%s | Loop',
+  },
+  description: 'Short-form video platform — discover, create, and share videos.',
+  keywords: ['loop', 'video', 'short-form', 'social media', 'tiktok-style'],
+  openGraph: {
+    siteName: 'Loop',
+    type: 'website',
+    locale: 'en_US',
+    url: APP_URL,
+    title: 'Loop — Short-form Video Platform',
+    description: 'Discover and share short-form videos on Loop.',
+    images: [
+      {
+        url: '/api/og?title=Loop&subtitle=Short-form+video+platform',
+        width: 1200,
+        height: 630,
+        alt: 'Loop',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@loop',
+    title: 'Loop — Short-form Video Platform',
+    description: 'Discover and share short-form videos on Loop.',
+    images: ['/api/og?title=Loop&subtitle=Short-form+video+platform'],
+  },
   icons: {
     icon: [
       {
@@ -27,6 +57,10 @@ export const metadata: Metadata = {
       },
     ],
     apple: '/apple-icon.png',
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 }
 
