@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { getForYouFeed, getFollowingFeed } from '../controllers/feed.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { validateQuery } from '../middleware/validation.middleware';
+import { responseCache } from '../middleware/cache.middleware';
 import { feedQuerySchema } from '../validators/feed.validator';
+import { cacheService } from '../services/cache.service';
 
 const router: Router = Router();
 
@@ -15,6 +17,10 @@ router.get(
   '/',
   authenticate,
   validateQuery(feedQuerySchema),
+  responseCache({
+    ttlSeconds: 30,
+    key: (req) => cacheService.buildFeedCacheKey(req),
+  }),
   getForYouFeed
 );
 

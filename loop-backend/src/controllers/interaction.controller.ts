@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AppError } from '../middleware/error.middleware';
 import { interactionService } from '../services/interaction.service';
+import { cacheService } from '../services/cache.service';
 import { GetCommentsQuery } from '../validators/interaction.validator';
 
 /**
@@ -17,6 +18,12 @@ export const likeVideo = async (req: AuthRequest, res: Response) => {
   }
 
   const result = await interactionService.toggleLikeVideo(userId, videoId);
+
+  await cacheService.invalidateByPatterns([
+    cacheService.patterns.videoById(videoId),
+    cacheService.patterns.allFeedResponses,
+    cacheService.patterns.legacyFeedCache,
+  ]);
 
   res.json({
     success: true,
@@ -37,6 +44,12 @@ export const unlikeVideo = async (req: AuthRequest, res: Response) => {
   }
 
   const result = await interactionService.toggleLikeVideo(userId, videoId);
+
+  await cacheService.invalidateByPatterns([
+    cacheService.patterns.videoById(videoId),
+    cacheService.patterns.allFeedResponses,
+    cacheService.patterns.legacyFeedCache,
+  ]);
 
   res.json({
     success: true,
@@ -99,6 +112,12 @@ export const shareVideo = async (req: AuthRequest, res: Response) => {
 
   const result = await interactionService.shareVideo(userId, videoId, platform);
 
+  await cacheService.invalidateByPatterns([
+    cacheService.patterns.videoById(videoId),
+    cacheService.patterns.allFeedResponses,
+    cacheService.patterns.legacyFeedCache,
+  ]);
+
   res.json({
     success: true,
     data: result,
@@ -145,6 +164,12 @@ export const addComment = async (req: AuthRequest, res: Response) => {
   }
 
   const result = await interactionService.addComment(userId, videoId, text.trim(), parentId);
+
+  await cacheService.invalidateByPatterns([
+    cacheService.patterns.videoById(videoId),
+    cacheService.patterns.allFeedResponses,
+    cacheService.patterns.legacyFeedCache,
+  ]);
 
   res.status(201).json({
     success: true,
@@ -206,11 +231,14 @@ export const deleteComment = async (req: AuthRequest, res: Response) => {
 
   await interactionService.deleteComment(userId, commentId);
 
+  await cacheService.invalidateByPatterns([
+    cacheService.patterns.allFeedResponses,
+    cacheService.patterns.legacyFeedCache,
+  ]);
+
   res.json({
     success: true,
     message: 'Comment deleted successfully',
   });
 };
-
-
 

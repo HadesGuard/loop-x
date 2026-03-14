@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { logger } from '../utils/logger';
 
 dotenv.config();
 
@@ -17,6 +18,8 @@ const envSchema = z.object({
   SHELBY_API_KEY: z.string().optional(),
   SHELBY_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
   SHELBY_SERVICE_ACCOUNT_ADDRESS: z.string().optional(),
+  APTOS_NODE_URL: z.string().default('https://fullnode.testnet.aptoslabs.com/v1'),
+  APTOS_CONTRACT_ADDRESS: z.string().optional(),
   FFMPEG_PATH: z.string().default('/usr/bin/ffmpeg'),
   LOG_LEVEL: z.string().default('info'),
   GOOGLE_CLIENT_ID: z.string().optional(),
@@ -34,9 +37,9 @@ try {
   env = envSchema.parse(process.env);
 } catch (error) {
   if (error instanceof z.ZodError) {
-    console.error('❌ Environment validation failed:');
+    logger.error('❌ Environment validation failed:');
     error.errors.forEach((err) => {
-      console.error(`  - ${err.path.join('.')}: ${err.message}`);
+      logger.error(`  - ${err.path.join('.')}: ${err.message}`);
     });
     process.exit(1);
   }

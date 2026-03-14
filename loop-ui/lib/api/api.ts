@@ -624,6 +624,8 @@ class ApiClient {
     totalViews: number;
     totalFollowers: number;
     totalLikes: number;
+    totalComments: number;
+    totalShares: number;
     totalVideos: number;
     avgEngagement: number;
     weeklyGrowth: number;
@@ -633,6 +635,8 @@ class ApiClient {
       totalViews: number;
       totalFollowers: number;
       totalLikes: number;
+      totalComments: number;
+      totalShares: number;
       totalVideos: number;
       avgEngagement: number;
       weeklyGrowth: number;
@@ -1148,6 +1152,119 @@ class ApiClient {
     const response = await this.request<ApiResponse<{ uploadedChunks: number; totalChunks: number; status: string }>>(`/uploads/${uploadId}/status`);
     if (response.success && response.data) return response.data;
     throw new Error('Failed to get upload status');
+  }
+
+  // Admin Methods
+  async getAdminStorageStats(): Promise<{
+    summary: {
+      totalBlobs: number;
+      totalBytes: number;
+      totalGb: number;
+      estimatedCostUsd: number;
+      expiredVideos: number;
+      costNote: string;
+    };
+    perUser: Array<{
+      userId: string;
+      username: string;
+      blobCount: number;
+      totalBytes: number;
+      estimatedCostUsd: number;
+    }>;
+  }> {
+    const response = await this.request<ApiResponse<any>>('/admin/storage-stats');
+    if (response.success && response.data) return response.data;
+    throw new Error('Failed to get storage stats');
+  }
+
+  async getReportStats(): Promise<{
+    total: number;
+    byStatus: { pending: number; reviewed: number; resolved: number; dismissed: number };
+    byType: { video: number; comment: number; user: number };
+  }> {
+    const response = await this.request<ApiResponse<{ stats: any }>>('/reports/stats');
+    if (response.success && response.data?.stats) return response.data.stats;
+    throw new Error('Failed to get report stats');
+  }
+
+  async getReports(params: {
+    status?: string;
+    type?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    reports: Array<{
+      id: string;
+      reporterId: string;
+      reporter: { id: string; username: string; avatarUrl: string | null };
+      type: string;
+      targetId: string;
+      reason: string;
+      description: string | null;
+      status: string;
+      notes: string | null;
+      createdAt: string;
+      reviewedAt: string | null;
+      reviewedBy: string | null;
+    }>;
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const query = new URLSearchParams();
+    if (params.status) query.set('status', params.status);
+    if (params.type) query.set('type', params.type);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    const response = await this.request<ApiResponse<any>>(`/reports?${query}`);
+    if (response.success && response.data) return response.data;
+    throw new Error('Failed to get reports');
+  }
+
+  async reviewReport(reportId: string, status: string, notes?: string): Promise<void> {
+    await this.request<ApiResponse<any>>(`/reports/${reportId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, notes }),
+    });
+  }
+
+  async takeReportAction(reportId: string, action: string, reason: string): Promise<void> {
+    await this.request<ApiResponse<any>>(`/reports/${reportId}/action`, {
+      method: 'POST',
+      body: JSON.stringify({ action, reason }),
+    });
+  }
+
+  async adminGetUsers(params: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    users: Array<{
+      id: string;
+      username: string;
+      fullName: string | null;
+      email: string | null;
+      avatarUrl: string | null;
+      role: string;
+      isActive: boolean;
+      createdAt: string;
+      _count?: { videos: number; followers: number; following: number };
+    }>;
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    const response = await this.request<ApiResponse<any>>(`/admin/users?${query}`);
+    if (response.success && response.data) return response.data;
+    throw new Error('Failed to get users');
+  }
+
+  async adminUpdateUser(userId: string, data: { isActive?: boolean; role?: string }): Promise<void> {
+    await this.request<ApiResponse<any>>(`/admin/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   }
 }
 

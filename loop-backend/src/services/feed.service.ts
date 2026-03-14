@@ -2,6 +2,7 @@ import { prisma } from '../config/database';
 import { redis } from '../config/redis';
 import { logger } from '../utils/logger';
 import { FeedItem, FeedResponse, FeedQuery } from '../types/feed.types';
+import { toPublicMediaUrl } from '../utils/cdn.util';
 
 const CACHE_TTL = 300; // 5 minutes
 const DEFAULT_LIMIT = 20;
@@ -102,8 +103,8 @@ export class FeedService {
     const items: FeedItem[] = videosWithScore.map((video) => ({
       id: video.id,
       userId: video.userId,
-      url: video.url,
-      thumbnailUrl: video.thumbnailUrl,
+      url: toPublicMediaUrl(video.url) || video.url,
+      thumbnailUrl: toPublicMediaUrl(video.thumbnailUrl),
       title: video.title,
       description: video.description,
       views: Number(video.views),
@@ -125,6 +126,9 @@ export class FeedService {
       shelbyExpiration: null,
       shelbySize: null,
       shelbyChunksets: null,
+      nftTokenAddress: null,
+      nftTxHash: null,
+      nftMintedAt: null,
       user: {
         id: video.user.id,
         username: video.user.username,
@@ -240,8 +244,8 @@ export class FeedService {
     const items: FeedItem[] = videos.map((video) => ({
       id: video.id,
       userId: video.userId,
-      url: video.url,
-      thumbnailUrl: video.thumbnailUrl,
+      url: toPublicMediaUrl(video.url) || video.url,
+      thumbnailUrl: toPublicMediaUrl(video.thumbnailUrl),
       title: video.title,
       description: video.description,
       views: Number(video.views),
@@ -263,6 +267,9 @@ export class FeedService {
       shelbyExpiration: null,
       shelbySize: null,
       shelbyChunksets: null,
+      nftTokenAddress: null,
+      nftTxHash: null,
+      nftMintedAt: null,
       user: {
         id: video.user.id,
         username: video.user.username,
@@ -306,6 +313,3 @@ export class FeedService {
 }
 
 export const feedService = new FeedService();
-
-
-

@@ -1,0 +1,3474 @@
+openapi: 3.0.3
+info:
+  title: Loop Backend API
+  version: 1.0.0
+  description: |
+    OpenAPI 3.0 specification for the Loop backend service.
+
+    This spec is derived from:
+    - `docs/api-specs.md` for intended endpoint behavior and examples
+    - route registrations under `src/routes/`
+    - Zod validators under `src/validators/`
+    - controller response envelopes under `src/controllers/`
+servers:
+  - url: https://api.loop.com/v1
+    description: Production API (documented)
+  - url: http://localhost:3000
+    description: Local development API
+tags:
+  - name: Health
+  - name: Auth
+  - name: Users
+  - name: Videos
+  - name: Feed
+  - name: Comments
+  - name: Conversations
+  - name: Notifications
+  - name: Search
+  - name: Hashtags
+  - name: Discovery
+  - name: Analytics
+  - name: Watch History
+  - name: Privacy
+  - name: Reports
+  - name: Sounds
+  - name: Uploads
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      tags: [Health]
+      operationId: healthCheck
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service health metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: user@example.com
+              password: securePassword123
+              username: username
+              fullName: Full Name
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                success: true
+                data:
+                  user:
+                    id: user_id
+                    username: username
+                    email: user@example.com
+                    fullName: Full Name
+                    avatar: null
+                    isVerified: false
+                    createdAt: '2024-01-01T00:00:00Z'
+                  token: jwt_token_here
+                  refreshToken: refresh_token_here
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Login with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@example.com
+              password: securePassword123
+              rememberMe: false
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                success: true
+                data:
+                  user:
+                    id: user_id
+                    username: username
+                    email: user@example.com
+                    fullName: Full Name
+                    avatar: null
+                    isVerified: false
+                    createdAt: '2024-01-01T00:00:00Z'
+                  token: jwt_token_here
+                  refreshToken: refresh_token_here
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshToken
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Logout current user
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: Logged out successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/google:
+    post:
+      tags: [Auth]
+      operationId: googleAuth
+      summary: Authenticate with Google
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+      responses:
+        '200':
+          description: OAuth successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/apple:
+    post:
+      tags: [Auth]
+      operationId: appleAuth
+      summary: Authenticate with Apple
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleAuthRequest'
+      responses:
+        '200':
+          description: OAuth successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/wallet/nonce:
+    post:
+      tags: [Auth]
+      operationId: generateWalletNonce
+      summary: Generate nonce for wallet authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletNonceRequest'
+      responses:
+        '200':
+          description: Nonce generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletNonceResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/wallet/verify:
+    post:
+      tags: [Auth]
+      operationId: verifyWallet
+      summary: Verify signed wallet challenge
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletVerifyRequest'
+      responses:
+        '200':
+          description: Wallet verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      operationId: forgotPassword
+      summary: Request password reset
+      description: Documented in `api-specs.md` but not currently mounted in `src/routes/auth.routes.ts`.
+      security: []
+      deprecated: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Password reset email queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      operationId: resetPassword
+      summary: Reset password with token
+      description: Documented in `api-specs.md` but not currently mounted in `src/routes/auth.routes.ts`.
+      security: []
+      deprecated: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /users/me:
+    get:
+      tags: [Users]
+      operationId: getCurrentUser
+      summary: Get current user profile
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    put:
+      tags: [Users]
+      operationId: updateProfile
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: User profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    delete:
+      tags: [Users]
+      operationId: deleteAccount
+      summary: Delete current user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccountRequest'
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: Account deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/me/avatar:
+    post:
+      tags: [Users]
+      operationId: uploadAvatar
+      summary: Upload avatar file or set avatar URL
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadAvatarMultipartRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadAvatarUrlRequest'
+      responses:
+        '200':
+          description: Avatar updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/me/saved:
+    get:
+      tags: [Users]
+      operationId: getSavedVideos
+      summary: Get current user's saved videos
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: Saved videos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoListCursorEnvelope'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/me/blocked:
+    get:
+      tags: [Privacy]
+      operationId: getBlockedUsers
+      summary: Get blocked users
+      responses:
+        '200':
+          description: Blocked users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockedUsersResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/me/privacy-settings:
+    get:
+      tags: [Privacy]
+      operationId: getPrivacySettings
+      summary: Get privacy settings
+      responses:
+        '200':
+          description: Privacy settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivacySettingsEnvelope'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    put:
+      tags: [Privacy]
+      operationId: updatePrivacySettings
+      summary: Update privacy settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivacySettingsRequest'
+      responses:
+        '200':
+          description: Privacy settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: Privacy settings updated successfully
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/{username}:
+    get:
+      tags: [Users]
+      operationId: getUserByUsername
+      summary: Get user profile by username
+      parameters:
+        - $ref: '#/components/parameters/UsernamePathParam'
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /users/{username}/videos:
+    get:
+      tags: [Users]
+      operationId: getUserVideos
+      summary: Get videos by username
+      parameters:
+        - $ref: '#/components/parameters/UsernamePathParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: User videos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoListCursorEnvelope'
+
+  /users/{username}/followers:
+    get:
+      tags: [Users]
+      operationId: getUserFollowers
+      summary: Get user followers
+      parameters:
+        - $ref: '#/components/parameters/UsernamePathParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: Followers list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListCursorEnvelope'
+
+  /users/{username}/following:
+    get:
+      tags: [Users]
+      operationId: getUserFollowing
+      summary: Get users that the user is following
+      parameters:
+        - $ref: '#/components/parameters/UsernamePathParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: Following list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListCursorEnvelope'
+
+  /users/{username}/liked:
+    get:
+      tags: [Users]
+      operationId: getUserLikedVideos
+      summary: Get liked videos by username
+      parameters:
+        - $ref: '#/components/parameters/UsernamePathParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CursorParam'
+      responses:
+        '200':
+          description: Liked videos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoListCursorEnvelope'
+
+  /users/{username}/saved:
+    get:
+      tags: [Users]
+      operationId: getUserSavedVideosByUsername
+      summary: Get saved videos by username
+      description: Documented in `api-specs.md`; implemented route currently exposes saved videos at `/users/me/saved`.
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/UsernamePathParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Saved videos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchHistoryEnvelope'
+
+  /users/{username}/follow:
+    post:
+      tags: [Users]
+      operationId: followUser
+      summary: Follow a user
+      parameters:
+        - $ref: '#/components/parameters/UsernamePathParam'
+      responses:
+        '200':
+          description: Followed user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: User followed successfully
+    delete:
+      tags: [Users]
+      operationId: unfollowUser
+      summary: Unfollow a user
+      parameters:
+        - $ref: '#/components/parameters/UsernamePathParam'
+      responses:
+        '200':
+          description: Unfollowed user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: User unfollowed successfully
+
+  /users/{username}/block:
+    post:
+      tags: [Privacy]
+      operationId: blockUser
+      summary: Block a user
+      parameters:
+        - $ref: '#/components/parameters/UsernamePathParam'
+      responses:
+        '200':
+          description: User blocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: User blocked successfully
+    delete:
+      tags: [Privacy]
+      operationId: unblockUser
+      summary: Unblock a user
+      parameters:
+        - $ref: '#/components/parameters/UsernamePathParam'
+      responses:
+        '200':
+          description: User unblocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: User unblocked successfully
+
+  /videos:
+    post:
+      tags: [Videos]
+      operationId: uploadVideo
+      summary: Upload a video
+      description: Uploads a single `video` file plus metadata.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadVideoMultipartRequest'
+            encoding:
+              video:
+                contentType: video/mp4, video/quicktime, video/x-msvideo, video/webm
+            example:
+              title: Weekend travel vlog
+              description: Highlights from Da Nang trip
+              privacy: public
+              allowComments: true
+              allowDuet: true
+              allowStitch: true
+      responses:
+        '201':
+          description: Video uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoEnvelopeWithMessage'
+              example:
+                success: true
+                message: Video uploaded successfully
+                data:
+                  video:
+                    id: video_id
+                    title: Weekend travel vlog
+                    description: Highlights from Da Nang trip
+                    privacy: public
+                    allowComments: true
+                    allowDuet: true
+                    allowStitch: true
+                    status: processing
+                    createdAt: '2024-01-01T00:00:00Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /videos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPathParam'
+    get:
+      tags: [Videos]
+      operationId: getVideo
+      summary: Get video by ID
+      responses:
+        '200':
+          description: Video details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    put:
+      tags: [Videos]
+      operationId: updateVideo
+      summary: Update video metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVideoRequest'
+      responses:
+        '200':
+          description: Video updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoEnvelopeWithMessage'
+              example:
+                success: true
+                message: Video updated successfully
+                data:
+                  video: {}
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    delete:
+      tags: [Videos]
+      operationId: deleteVideo
+      summary: Delete a video
+      responses:
+        '200':
+          description: Video deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: Video deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /videos/{id}/thumbnail:
+    post:
+      tags: [Videos]
+      operationId: updateVideoThumbnail
+      summary: Update video thumbnail
+      description: Documented in `api-specs.md` but not currently mounted in `src/routes/video.routes.ts`.
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadThumbnailRequest'
+      responses:
+        '200':
+          description: Thumbnail updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /videos/{id}/analytics:
+    get:
+      tags: [Analytics]
+      operationId: getVideoAnalytics
+      summary: Get analytics for a specific video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Video analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsEnvelope'
+
+  /videos/{id}/track-view:
+    post:
+      tags: [Analytics]
+      operationId: trackView
+      summary: Track a video view
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackViewRequest'
+      responses:
+        '200':
+          description: View tracked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: View tracked
+
+  /videos/{id}/stream:
+    get:
+      tags: [Videos]
+      operationId: streamVideo
+      summary: Stream video binary
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Video byte stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /videos/{id}/hls:
+    get:
+      tags: [Videos]
+      operationId: streamVideoHls
+      summary: Get HLS stream info
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: HLS or direct stream metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HlsInfoEnvelope'
+
+  /videos/{id}/like:
+    post:
+      tags: [Videos]
+      operationId: likeVideo
+      summary: Like a video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Like state changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleLikeEnvelope'
+    delete:
+      tags: [Videos]
+      operationId: unlikeVideo
+      summary: Unlike a video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Like state changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleLikeEnvelope'
+
+  /videos/{id}/save:
+    post:
+      tags: [Videos]
+      operationId: saveVideo
+      summary: Save a video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Save state changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleSaveEnvelope'
+    delete:
+      tags: [Videos]
+      operationId: unsaveVideo
+      summary: Unsave a video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Save state changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleSaveEnvelope'
+
+  /videos/{id}/share:
+    post:
+      tags: [Videos]
+      operationId: shareVideo
+      summary: Record a share action
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareVideoRequest'
+      responses:
+        '200':
+          description: Share recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareEnvelope'
+
+  /videos/{id}/comments:
+    get:
+      tags: [Comments]
+      operationId: getVideoComments
+      summary: Get comments for a video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/CommentsLimitParam'
+        - $ref: '#/components/parameters/CommentSortParam'
+      responses:
+        '200':
+          description: Comments list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentsEnvelope'
+    post:
+      tags: [Comments]
+      operationId: addVideoComment
+      summary: Add a comment to a video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCommentRequest'
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentEnvelope'
+
+  /videos/{id}/duet:
+    post:
+      tags: [Videos]
+      operationId: createDuet
+      summary: Create a duet video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DuetMultipartRequest'
+      responses:
+        '200':
+          description: Duet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /videos/{id}/duets:
+    get:
+      tags: [Videos]
+      operationId: getDuets
+      summary: Get duets for a video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Duet list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /videos/{id}/duet-info:
+    get:
+      tags: [Videos]
+      operationId: getDuetInfo
+      summary: Get duet metadata
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Duet metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /videos/{id}/stitch:
+    post:
+      tags: [Videos]
+      operationId: createStitch
+      summary: Create a stitch video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StitchMultipartRequest'
+      responses:
+        '200':
+          description: Stitch created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /videos/{id}/stitches:
+    get:
+      tags: [Videos]
+      operationId: getStitches
+      summary: Get stitches for a video
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Stitch list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /videos/{id}/stitch-info:
+    get:
+      tags: [Videos]
+      operationId: getStitchInfo
+      summary: Get stitch metadata
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Stitch metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /feed:
+    get:
+      tags: [Feed]
+      operationId: getForYouFeed
+      summary: Get for-you feed
+      parameters:
+        - $ref: '#/components/parameters/CursorUuidParam'
+        - $ref: '#/components/parameters/FeedLimitParam'
+      responses:
+        '200':
+          description: For-you feed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedEnvelope'
+              example:
+                success: true
+                data:
+                  videos:
+                    - id: video_id
+                      title: Demo video
+                      username: '@creator'
+                      views: 1200
+                      likes: 345
+                      comments: 12
+                      shares: 7
+                  nextCursor: 550e8400-e29b-41d4-a716-446655440000
+
+  /feed/following:
+    get:
+      tags: [Feed]
+      operationId: getFollowingFeed
+      summary: Get following feed
+      parameters:
+        - $ref: '#/components/parameters/CursorUuidParam'
+        - $ref: '#/components/parameters/FeedLimitParam'
+      responses:
+        '200':
+          description: Following feed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedEnvelope'
+
+  /feed/more:
+    get:
+      tags: [Feed]
+      operationId: getFeedMore
+      summary: Get additional feed items
+      description: Documented in `api-specs.md`; current route tree uses cursor-based `/feed` and `/feed/following`.
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/FeedTypeParam'
+        - $ref: '#/components/parameters/OffsetParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Additional feed items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedMoreEnvelope'
+
+  /comments/{id}/like:
+    post:
+      tags: [Comments]
+      operationId: likeComment
+      summary: Like a comment
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Comment like state changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleLikeEnvelope'
+    delete:
+      tags: [Comments]
+      operationId: unlikeComment
+      summary: Unlike a comment
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Comment like state changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleLikeEnvelope'
+
+  /comments/{id}:
+    delete:
+      tags: [Comments]
+      operationId: deleteComment
+      summary: Delete a comment
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Comment deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: Comment deleted successfully
+
+  /conversations:
+    get:
+      tags: [Conversations]
+      operationId: getConversations
+      summary: Get current user's conversations
+      responses:
+        '200':
+          description: Conversation list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationsEnvelope'
+    post:
+      tags: [Conversations]
+      operationId: createOrGetConversation
+      summary: Create or get conversation by user ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationRequest'
+      responses:
+        '201':
+          description: Conversation created or found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationEnvelope'
+
+  /conversations/{id}/messages:
+    get:
+      tags: [Conversations]
+      operationId: getMessages
+      summary: Get messages in a conversation
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/MessagesLimitParam'
+        - $ref: '#/components/parameters/BeforeParam'
+      responses:
+        '200':
+          description: Message list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagesEnvelope'
+    post:
+      tags: [Conversations]
+      operationId: sendMessage
+      summary: Send a message
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageEnvelope'
+
+  /conversations/{id}/read:
+    put:
+      tags: [Conversations]
+      operationId: markConversationRead
+      summary: Mark conversation as read
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: Conversation marked as read
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      operationId: getNotifications
+      summary: Get notifications
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/NotificationTypeParam'
+      responses:
+        '200':
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationsEnvelope'
+
+  /notifications/read-all:
+    put:
+      tags: [Notifications]
+      operationId: markAllNotificationsRead
+      summary: Mark all notifications as read
+      responses:
+        '200':
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: All notifications marked as read
+
+  /notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      operationId: markNotificationRead
+      summary: Mark notification as read
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: Notification marked as read
+
+  /search:
+    get:
+      tags: [Search]
+      operationId: search
+      summary: Search users, videos, and hashtags
+      parameters:
+        - $ref: '#/components/parameters/SearchQueryParam'
+        - $ref: '#/components/parameters/SearchTypeParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchEnvelope'
+        '400':
+          description: Missing search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageErrorResponse'
+
+  /hashtags/trending:
+    get:
+      tags: [Hashtags]
+      operationId: getTrendingHashtags
+      summary: Get trending hashtags
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Trending hashtags
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendingHashtagsEnvelope'
+
+  /hashtags/{tag}:
+    get:
+      tags: [Hashtags]
+      operationId: getHashtagPage
+      summary: Get hashtag page
+      parameters:
+        - $ref: '#/components/parameters/TagPathParam'
+        - $ref: '#/components/parameters/HashtagSortParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Hashtag page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HashtagPageEnvelope'
+
+  /hashtags/{tag}/follow:
+    post:
+      tags: [Hashtags]
+      operationId: followHashtag
+      summary: Follow a hashtag
+      description: Documented in `api-specs.md` but not currently mounted in `src/routes/hashtag.routes.ts`.
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/TagPathParam'
+      responses:
+        '200':
+          description: Hashtag followed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+    delete:
+      tags: [Hashtags]
+      operationId: unfollowHashtag
+      summary: Unfollow a hashtag
+      description: Documented in `api-specs.md` but not currently mounted in `src/routes/hashtag.routes.ts`.
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/TagPathParam'
+      responses:
+        '200':
+          description: Hashtag unfollowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /discover/trending:
+    get:
+      tags: [Discovery]
+      operationId: getTrendingVideos
+      summary: Get trending videos
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/TimeframeParam'
+      responses:
+        '200':
+          description: Trending videos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscoveryTrendingEnvelope'
+
+  /discover/creators:
+    get:
+      tags: [Discovery]
+      operationId: getTopCreators
+      summary: Get top creators
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/CategoryParam'
+      responses:
+        '200':
+          description: Top creators
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopCreatorsEnvelope'
+
+  /discover/hashtags:
+    get:
+      tags: [Discovery]
+      operationId: getDiscoverHashtags
+      summary: Get discover hashtags
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Discover hashtags
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendingHashtagsEnvelope'
+
+  /analytics/overview:
+    get:
+      tags: [Analytics]
+      operationId: getOverview
+      summary: Get analytics overview
+      responses:
+        '200':
+          description: Overview analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsEnvelope'
+
+  /history:
+    get:
+      tags: [Watch History]
+      operationId: getHistoryLegacy
+      summary: Get watch history (legacy path)
+      description: Documented in `api-specs.md`; implemented route path is `/watch-history`.
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+      responses:
+        '200':
+          description: Watch history list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchHistoryEnvelope'
+    post:
+      tags: [Watch History]
+      operationId: addToHistoryLegacy
+      summary: Add video to watch history (legacy path)
+      description: Documented in `api-specs.md` but not currently mounted in `src/routes/watch-history.routes.ts`.
+      deprecated: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddToHistoryRequest'
+      responses:
+        '200':
+          description: History item recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+    delete:
+      tags: [Watch History]
+      operationId: deleteHistoryLegacy
+      summary: Clear watch history (legacy path)
+      description: Documented in `api-specs.md`; implemented route path is `/watch-history`.
+      deprecated: true
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteHistoryRequest'
+      responses:
+        '200':
+          description: Watch history cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /watch-history:
+    get:
+      tags: [Watch History]
+      operationId: getWatchHistory
+      summary: Get watch history
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/HistoryLimitParam'
+      responses:
+        '200':
+          description: Watch history list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchHistoryEnvelope'
+    delete:
+      tags: [Watch History]
+      operationId: clearWatchHistory
+      summary: Clear watch history
+      responses:
+        '200':
+          description: Watch history cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: Watch history cleared
+
+  /watch-history/{videoId}:
+    delete:
+      tags: [Watch History]
+      operationId: removeFromWatchHistory
+      summary: Remove one video from watch history
+      parameters:
+        - $ref: '#/components/parameters/VideoIdPathParam'
+      responses:
+        '200':
+          description: Removed from history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: Video removed from watch history
+
+  /reports:
+    post:
+      tags: [Reports]
+      operationId: createReport
+      summary: Create abuse report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReportRequest'
+      responses:
+        '200':
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                success: true
+                message: Report submitted successfully
+    get:
+      tags: [Reports]
+      operationId: getReports
+      summary: List reports (admin only)
+      description: Requires authenticated admin user.
+      parameters:
+        - $ref: '#/components/parameters/ReportStatusParam'
+        - $ref: '#/components/parameters/ReportTypeParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Reports list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /reports/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPathParam'
+    get:
+      tags: [Reports]
+      operationId: getReportById
+      summary: Get report details (admin only)
+      responses:
+        '200':
+          description: Report details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportEnvelope'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+    put:
+      tags: [Reports]
+      operationId: reviewReport
+      summary: Review report (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewReportRequest'
+      responses:
+        '200':
+          description: Report reviewed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportEnvelopeWithMessage'
+
+  /reports/{id}/action:
+    post:
+      tags: [Reports]
+      operationId: takeModerationAction
+      summary: Take moderation action (admin only)
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationActionRequest'
+      responses:
+        '200':
+          description: Moderation action executed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataWithMessageEnvelope'
+
+  /sounds:
+    get:
+      tags: [Sounds]
+      operationId: getSounds
+      summary: Get sounds catalog
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SoundSortParam'
+        - $ref: '#/components/parameters/GenreParam'
+        - $ref: '#/components/parameters/DurationParam'
+        - $ref: '#/components/parameters/SoundSearchParam'
+      responses:
+        '200':
+          description: Sounds list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+    post:
+      tags: [Sounds]
+      operationId: uploadSound
+      summary: Upload a sound track
+      description: Documented in `api-specs.md` but not currently mounted in `src/routes/sound.routes.ts`.
+      deprecated: true
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadSoundMultipartRequest'
+      responses:
+        '201':
+          description: Sound uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /sounds/trending:
+    get:
+      tags: [Sounds]
+      operationId: getTrendingSounds
+      summary: Get trending sounds
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SoundTimeframeParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/GenreParam'
+      responses:
+        '200':
+          description: Trending sounds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /sounds/genres:
+    get:
+      tags: [Sounds]
+      operationId: getGenres
+      summary: Get available sound genres
+      security: []
+      responses:
+        '200':
+          description: Sound genres
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenresEnvelope'
+
+  /sounds/search:
+    get:
+      tags: [Sounds]
+      operationId: searchSounds
+      summary: Search sounds
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/SoundQueryParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/GenreParam'
+      responses:
+        '200':
+          description: Sound search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /sounds/favorites:
+    get:
+      tags: [Sounds]
+      operationId: getFavoriteSounds
+      summary: Get favorited sounds
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Favorite sounds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /sounds/{id}:
+    get:
+      tags: [Sounds]
+      operationId: getSoundById
+      summary: Get sound by ID
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Sound details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /sounds/{id}/videos:
+    get:
+      tags: [Sounds]
+      operationId: getSoundVideos
+      summary: Get videos using a sound
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SoundSortNoAlphaParam'
+      responses:
+        '200':
+          description: Videos for a sound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+  /sounds/{id}/favorite:
+    post:
+      tags: [Sounds]
+      operationId: favoriteSound
+      summary: Toggle favorite on sound (POST)
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Favorite toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoriteEnvelope'
+    delete:
+      tags: [Sounds]
+      operationId: unfavoriteSound
+      summary: Toggle favorite on sound (DELETE)
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Favorite toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoriteEnvelope'
+
+  /uploads/initiate:
+    post:
+      tags: [Uploads]
+      operationId: initiateUpload
+      summary: Initiate chunked upload session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiateUploadRequest'
+      responses:
+        '201':
+          description: Upload session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataWithMessageEnvelope'
+              example:
+                success: true
+                message: Upload session created
+                data:
+                  uploadId: upload_id
+                  chunkSize: 6291456
+                  totalChunks: 42
+
+  /uploads/{id}/chunk/{index}:
+    put:
+      tags: [Uploads]
+      operationId: uploadChunk
+      summary: Upload a binary chunk
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+        - $ref: '#/components/parameters/ChunkIndexPathParam'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Chunk uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataWithMessageEnvelope'
+              example:
+                success: true
+                message: Chunk uploaded
+                data:
+                  uploadedChunks: 5
+                  totalChunks: 42
+
+  /uploads/{id}/complete:
+    post:
+      tags: [Uploads]
+      operationId: completeUpload
+      summary: Complete chunked upload
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Upload completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoEnvelopeWithMessage'
+              example:
+                success: true
+                message: Upload completed successfully
+                data:
+                  video: {}
+
+  /uploads/{id}/status:
+    get:
+      tags: [Uploads]
+      operationId: getUploadStatus
+      summary: Get upload status
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Upload status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericDataEnvelope'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdPathParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UsernamePathParam:
+      name: username
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 50
+        pattern: '^[a-zA-Z0-9_]+$'
+    TagPathParam:
+      name: tag
+      in: path
+      required: true
+      schema:
+        type: string
+    VideoIdPathParam:
+      name: videoId
+      in: path
+      required: true
+      schema:
+        type: string
+    ChunkIndexPathParam:
+      name: index
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 0
+    CursorParam:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Cursor for cursor-based pagination
+    CursorUuidParam:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    LimitParam:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    FeedLimitParam:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    FeedTypeParam:
+      name: type
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [foryou, following]
+        default: foryou
+    OffsetParam:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    CommentsLimitParam:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    MessagesLimitParam:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    HistoryLimitParam:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    BeforeParam:
+      name: before
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    CommentSortParam:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [newest, oldest, popular]
+        default: newest
+    HashtagSortParam:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [trending, recent]
+        default: trending
+    SearchQueryParam:
+      name: q
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    SearchTypeParam:
+      name: type
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [all, users, videos, hashtags]
+        default: all
+    NotificationTypeParam:
+      name: type
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [like, comment, follow, reply, mention]
+    TimeframeParam:
+      name: timeframe
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [day, week, month]
+        default: week
+    CategoryParam:
+      name: category
+      in: query
+      required: false
+      schema:
+        type: string
+    ReportStatusParam:
+      name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [pending, reviewed, resolved, dismissed]
+    ReportTypeParam:
+      name: type
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [video, user, comment]
+    SoundSortParam:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [trending, recent, popular, alphabetical]
+        default: trending
+    SoundSortNoAlphaParam:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [trending, recent, popular]
+        default: trending
+    SoundTimeframeParam:
+      name: timeframe
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [day, week, month]
+        default: week
+    GenreParam:
+      name: genre
+      in: query
+      required: false
+      schema:
+        type: string
+    DurationParam:
+      name: duration
+      in: query
+      required: false
+      schema:
+        type: string
+    SoundSearchParam:
+      name: search
+      in: query
+      required: false
+      schema:
+        type: string
+    SoundQueryParam:
+      name: q
+      in: query
+      required: false
+      schema:
+        type: string
+
+  responses:
+    ValidationError:
+      description: Validation failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: Validation failed
+              code: VALIDATION_ERROR
+              errors:
+                - field: email
+                  message: Invalid email address
+    UnauthorizedError:
+      description: Authentication required or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: Unauthorized
+              code: UNAUTHORIZED
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: Forbidden
+              code: FORBIDDEN
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: Resource not found
+              code: NOT_FOUND
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              message: Internal Server Error
+              code: INTERNAL_ERROR
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, timestamp, uptime]
+      properties:
+        status:
+          type: string
+          example: ok
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+
+    MessageResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+
+    MessageErrorResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        error:
+          type: object
+          required: [message, code]
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+            errors:
+              type: array
+              items:
+                type: object
+                required: [field, message]
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+
+    GenericObject:
+      type: object
+      additionalProperties: true
+
+    RegisterRequest:
+      type: object
+      required: [email, password, username]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9_]+$'
+        fullName:
+          type: string
+          maxLength: 255
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+        rememberMe:
+          type: boolean
+          default: false
+
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+
+    GoogleAuthRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+          minLength: 1
+
+    AppleAuthRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+          minLength: 1
+        userInfo:
+          type: object
+          properties:
+            email:
+              type: string
+              format: email
+            fullName:
+              type: string
+
+    WalletNonceRequest:
+      type: object
+      required: [address]
+      properties:
+        address:
+          type: string
+          minLength: 1
+
+    WalletVerifyRequest:
+      type: object
+      required: [address, signature, fullMessage, walletType]
+      properties:
+        address:
+          type: string
+          minLength: 1
+        signature:
+          type: string
+          minLength: 1
+        fullMessage:
+          type: string
+          minLength: 1
+        walletType:
+          type: string
+          enum: [aptos, ethereum, solana]
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          nullable: true
+        isVerified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthPayload:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUser'
+        token:
+          type: string
+        refreshToken:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/AuthPayload'
+
+    WalletNonceResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            nonce:
+              type: string
+            expiresAt:
+              type: string
+              format: date-time
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        fullName:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        isVerified:
+          type: boolean
+        followers:
+          type: integer
+        following:
+          type: integer
+        videos:
+          type: integer
+        likes:
+          type: integer
+        joined:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Video:
+      type: object
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        thumbnail:
+          type: string
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        username:
+          type: string
+        userId:
+          type: string
+        views:
+          type: integer
+        likes:
+          type: integer
+        comments:
+          type: integer
+        shares:
+          type: integer
+        hashtags:
+          type: array
+          items:
+            type: string
+        privacy:
+          type: string
+          enum: [public, private, friends, followers]
+        allowComments:
+          type: boolean
+        allowDuet:
+          type: boolean
+        allowStitch:
+          type: boolean
+        duration:
+          type: integer
+        status:
+          type: string
+          enum: [processing, ready, failed]
+        createdAt:
+          type: string
+          format: date-time
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        likes:
+          type: integer
+        isLiked:
+          type: boolean
+        parentId:
+          type: string
+          nullable: true
+        username:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+        replies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+        repliesCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [like, comment, follow, reply, mention]
+        action:
+          type: string
+        comment:
+          type: string
+          nullable: true
+        read:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/User'
+        video:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+        lastMessage:
+          type: string
+          nullable: true
+        unread:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        conversationId:
+          type: string
+        senderId:
+          type: string
+        sender:
+          type: string
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CursorPagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+        nextCursor:
+          type: string
+          nullable: true
+
+    NumberPagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        hasMore:
+          type: boolean
+
+    UserEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+
+    VideoEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            video:
+              $ref: '#/components/schemas/Video'
+
+    VideoEnvelopeWithMessage:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            video:
+              $ref: '#/components/schemas/Video'
+
+    VideoListCursorEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            videos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Video'
+            pagination:
+              $ref: '#/components/schemas/CursorPagination'
+
+    UserListCursorEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+            pagination:
+              $ref: '#/components/schemas/CursorPagination'
+
+    UploadAvatarMultipartRequest:
+      type: object
+      properties:
+        avatar:
+          type: string
+          format: binary
+
+    UploadAvatarUrlRequest:
+      type: object
+      required: [avatarUrl]
+      properties:
+        avatarUrl:
+          type: string
+          format: uri
+
+    AvatarResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            avatarUrl:
+              type: string
+
+    UpdateProfileRequest:
+      type: object
+      minProperties: 1
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        bio:
+          type: string
+          maxLength: 500
+        website:
+          anyOf:
+            - type: string
+              format: uri
+              maxLength: 255
+            - type: string
+              enum: ['']
+
+    DeleteAccountRequest:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 1
+
+    PrivacySettings:
+      type: object
+      properties:
+        profileVisibility:
+          type: string
+          enum: [public, private]
+        allowMessages:
+          type: string
+          enum: [everyone, followers, none]
+        allowComments:
+          type: boolean
+        allowDuet:
+          type: boolean
+        allowStitch:
+          type: boolean
+        showActivityStatus:
+          type: boolean
+
+    PrivacySettingsRequest:
+      allOf:
+        - $ref: '#/components/schemas/PrivacySettings'
+
+    PrivacySettingsEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/PrivacySettings'
+
+    BlockedUsersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+
+    UploadVideoMultipartRequest:
+      type: object
+      required: [video, title]
+      properties:
+        video:
+          type: string
+          format: binary
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        privacy:
+          type: string
+          enum: [public, private, friends]
+          default: public
+        allowComments:
+          type: boolean
+          default: true
+        allowDuet:
+          type: boolean
+          default: true
+        allowStitch:
+          type: boolean
+          default: true
+
+    UploadThumbnailRequest:
+      type: object
+      required: [thumbnail]
+      properties:
+        thumbnail:
+          type: string
+          format: binary
+
+    UpdateVideoRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        privacy:
+          type: string
+          enum: [public, private, friends]
+        allowComments:
+          type: boolean
+        allowDuet:
+          type: boolean
+        allowStitch:
+          type: boolean
+
+    TrackViewRequest:
+      type: object
+      properties:
+        watchedDuration:
+          type: integer
+          minimum: 0
+
+    ToggleLikeEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            liked:
+              type: boolean
+            likesCount:
+              type: integer
+            likes:
+              type: integer
+
+    ToggleSaveEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            saved:
+              type: boolean
+
+    ShareVideoRequest:
+      type: object
+      properties:
+        platform:
+          type: string
+          enum: [copy_link, twitter, facebook, whatsapp, telegram]
+
+    ShareEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            shareUrl:
+              type: string
+            sharesCount:
+              type: integer
+
+    AddCommentRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        parentId:
+          type: string
+          format: uuid
+
+    CommentEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/Comment'
+
+    CommentsEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            comments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Comment'
+            pagination:
+              $ref: '#/components/schemas/NumberPagination'
+
+    HlsInfoEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          oneOf:
+            - type: object
+              properties:
+                hlsUrl:
+                  type: string
+                type:
+                  type: string
+                  enum: [hls]
+            - type: object
+              properties:
+                streamUrl:
+                  type: string
+                type:
+                  type: string
+                  enum: [direct]
+
+    DuetMultipartRequest:
+      type: object
+      required: [video]
+      properties:
+        video:
+          type: string
+          format: binary
+        title:
+          type: string
+        description:
+          type: string
+        position:
+          type: string
+        alignment:
+          type: string
+
+    StitchMultipartRequest:
+      type: object
+      required: [video]
+      properties:
+        video:
+          type: string
+          format: binary
+        title:
+          type: string
+        description:
+          type: string
+        clipStartTime:
+          type: number
+        clipEndTime:
+          type: number
+        clipDuration:
+          type: number
+
+    FeedEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            videos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Video'
+            nextCursor:
+              type: string
+              nullable: true
+
+    FeedMoreEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            videos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Video'
+            pagination:
+              $ref: '#/components/schemas/NumberPagination'
+
+    CreateConversationRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          format: uuid
+
+    SendMessageRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+
+    ConversationsEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            conversations:
+              type: array
+              items:
+                $ref: '#/components/schemas/Conversation'
+
+    ConversationEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/Conversation'
+
+    MessagesEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            messages:
+              type: array
+              items:
+                $ref: '#/components/schemas/Message'
+            pagination:
+              $ref: '#/components/schemas/NumberPagination'
+
+    MessageEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/Message'
+
+    NotificationsEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            notifications:
+              type: array
+              items:
+                $ref: '#/components/schemas/Notification'
+            unreadCount:
+              type: integer
+            pagination:
+              $ref: '#/components/schemas/NumberPagination'
+
+    SearchEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+            videos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Video'
+            hashtags:
+              type: array
+              items:
+                type: object
+                properties:
+                  tag:
+                    type: string
+                  views:
+                    type: string
+            pagination:
+              $ref: '#/components/schemas/NumberPagination'
+
+    TrendingHashtagsEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            hashtags:
+              type: array
+              items:
+                type: object
+                properties:
+                  tag:
+                    type: string
+                  views:
+                    type: string
+                  growth:
+                    type: string
+                  videosCount:
+                    type: integer
+
+    HashtagPageEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            tag:
+              type: string
+            totalVideos:
+              type: integer
+            totalViews:
+              type: string
+            videos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Video'
+            pagination:
+              $ref: '#/components/schemas/NumberPagination'
+
+    DiscoveryTrendingEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            videos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Video'
+            pagination:
+              $ref: '#/components/schemas/NumberPagination'
+
+    TopCreatorsEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            creators:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+
+    AnalyticsEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/GenericObject'
+
+    WatchHistoryEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            videos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Video'
+            pagination:
+              $ref: '#/components/schemas/NumberPagination'
+
+    AddToHistoryRequest:
+      type: object
+      required: [videoId]
+      properties:
+        videoId:
+          type: string
+        watchedDuration:
+          type: integer
+          minimum: 0
+
+    DeleteHistoryRequest:
+      type: object
+      properties:
+        videoIds:
+          type: array
+          items:
+            type: string
+
+    CreateReportRequest:
+      type: object
+      required: [type, targetId, reason]
+      properties:
+        type:
+          type: string
+          enum: [user, video]
+        targetId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          enum: [spam, harassment, inappropriate, violence, copyright, other]
+        description:
+          type: string
+          maxLength: 1000
+
+    ReviewReportRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [reviewed, resolved, dismissed]
+        notes:
+          type: string
+          maxLength: 2000
+
+    ModerationActionRequest:
+      type: object
+      required: [action, reason]
+      properties:
+        action:
+          type: string
+          enum: [warn, remove_content, suspend_user]
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+
+    ReportEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            report:
+              $ref: '#/components/schemas/GenericObject'
+
+    ReportEnvelopeWithMessage:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            report:
+              $ref: '#/components/schemas/GenericObject'
+
+    FavoriteEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            favorited:
+              type: boolean
+
+    GenresEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            genres:
+              type: array
+              items:
+                type: string
+
+    InitiateUploadRequest:
+      type: object
+      required:
+        - fileName
+        - fileSize
+        - mimeType
+        - title
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        fileSize:
+          type: integer
+          minimum: 1
+          maximum: 524288000
+        mimeType:
+          type: string
+          pattern: '^video/'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        privacy:
+          type: string
+          enum: [public, private, followers]
+          default: public
+        allowComments:
+          type: boolean
+          default: true
+        allowDuet:
+          type: boolean
+          default: true
+        allowStitch:
+          type: boolean
+          default: true
+
+    UploadSoundMultipartRequest:
+      type: object
+      required: [audio, title]
+      properties:
+        audio:
+          type: string
+          format: binary
+        title:
+          type: string
+          minLength: 1
+        genre:
+          type: string
+        description:
+          type: string
+
+    GenericDataEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/GenericObject'
+
+    GenericDataWithMessageEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/GenericObject'

@@ -5,6 +5,7 @@ import { shelbyService } from './shelby.service';
 import { UploadVideoInput, VideoResponse } from '../types/video.types';
 import { randomUUID } from 'crypto';
 import { queueVideoProcessing } from '../queues/video-processing.queue';
+import { toPublicMediaUrl } from '../utils/cdn.util';
 
 export class VideoService {
   /**
@@ -97,6 +98,19 @@ export class VideoService {
       throw new AppError('Video is private', 403, 'VIDEO_PRIVATE');
     }
 
+    // Graceful degradation: if blob expiration has passed, mark as expired on first access
+    if (
+      video.status === 'ready' &&
+      video.shelbyExpiration !== null &&
+      video.shelbyExpiration <= BigInt(Date.now() * 1000)
+    ) {
+      const updated = await prisma.video.update({
+        where: { id: videoId },
+        data: { status: 'expired' },
+      });
+      return this.mapVideoToResponse(updated);
+    }
+
     return this.mapVideoToResponse(video);
   }
 
@@ -123,6 +137,10 @@ export class VideoService {
 
     if (!video.shelbyAccount || !video.shelbyBlobName) {
       throw new AppError('Video not available on Shelby', 404, 'VIDEO_NOT_ON_SHELBY');
+    }
+
+    if (video.status === 'expired') {
+      throw new AppError('Video is no longer available', 410, 'VIDEO_EXPIRED');
     }
 
     if (video.status !== 'ready') {
@@ -203,11 +221,12 @@ export class VideoService {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private mapVideoToResponse(video: any): VideoResponse {
+    // Map shelby:// URLs to HTTP CDN/gateway URLs at response time
     return {
       id: video.id,
       userId: video.userId,
-      url: video.url,
-      thumbnailUrl: video.thumbnailUrl,
+      url: toPublicMediaUrl(video.url) || video.url,
+      thumbnailUrl: toPublicMediaUrl(video.thumbnailUrl),
       title: video.title,
       description: video.description,
       views: Number(video.views),
@@ -229,9 +248,11 @@ export class VideoService {
       shelbyExpiration: video.shelbyExpiration ? video.shelbyExpiration.toString() : null,
       shelbySize: video.shelbySize ? Number(video.shelbySize) : null,
       shelbyChunksets: video.shelbyChunksets,
+      nftTokenAddress: video.nftTokenAddress ?? null,
+      nftTxHash: video.nftTxHash ?? null,
+      nftMintedAt: video.nftMintedAt ?? null,
     };
   }
 }
 
 export const videoService = new VideoService();
-

@@ -49,6 +49,8 @@ export default function CreatorStudioPage() {
     totalViews: 0,
     totalFollowers: 0,
     totalLikes: 0,
+    totalComments: 0,
+    totalShares: 0,
     totalVideos: 0,
     avgEngagement: 0,
     weeklyGrowth: 0,
@@ -75,6 +77,8 @@ export default function CreatorStudioPage() {
           totalViews: 0,
           totalFollowers: 0,
           totalLikes: 0,
+          totalComments: 0,
+          totalShares: 0,
           totalVideos: 0,
           avgEngagement: 0,
           weeklyGrowth: 0,
@@ -92,11 +96,11 @@ export default function CreatorStudioPage() {
         title: video.caption || "Untitled",
         thumbnail: video.thumbnail || null,
         views: video.views,
-        likes: 0, // Will need to get from video details
-        comments: 0, // Will need to get from video details
-        shares: 0, // Will need to get from video details
-        uploadDate: "Recently", // Will need to get from video details
-        duration: null, // Will need to get from video details
+        likes: video.likes,
+        comments: video.commentsCount,
+        shares: video.sharesCount,
+        uploadDate: video.createdAt ? formatDistanceToNow(new Date(video.createdAt), { addSuffix: true }) : "Recently",
+        duration: video.duration,
       }))
       
       setVideos(videoStats)
@@ -232,7 +236,7 @@ export default function CreatorStudioPage() {
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-2xl font-bold">2.4K</div>
+              <div className="text-2xl font-bold">{formatNumber(Math.round(totalStats.watchHours))}</div>
               <div className="text-white/60 text-sm">Watch Hours</div>
             </div>
           </div>

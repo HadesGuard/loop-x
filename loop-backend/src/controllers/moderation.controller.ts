@@ -67,6 +67,19 @@ export const reviewReport = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * GET /reports/stats
+ * Get moderation queue stats (admin only)
+ */
+export const getReportStats = async (_req: AuthRequest, res: Response) => {
+  const stats = await moderationService.getReportStats();
+
+  res.json({
+    success: true,
+    data: { stats },
+  });
+};
+
+/**
  * POST /reports/:id/action
  * Take moderation action on a report (admin only)
  */

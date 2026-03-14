@@ -312,6 +312,48 @@ export class ModerationService {
 
     return result;
   }
+
+  /**
+   * Get moderation queue stats
+   */
+  async getReportStats() {
+    const [total, byStatus, byType] = await Promise.all([
+      prisma.report.count(),
+      prisma.report.groupBy({
+        by: ['status'],
+        _count: { status: true },
+      }),
+      prisma.report.groupBy({
+        by: ['type'],
+        _count: { type: true },
+      }),
+    ]);
+
+    const statusCounts: Record<string, number> = {};
+    for (const row of byStatus) {
+      statusCounts[row.status] = row._count.status;
+    }
+
+    const typeCounts: Record<string, number> = {};
+    for (const row of byType) {
+      typeCounts[row.type] = row._count.type;
+    }
+
+    return {
+      total,
+      byStatus: {
+        pending: statusCounts['pending'] ?? 0,
+        reviewed: statusCounts['reviewed'] ?? 0,
+        resolved: statusCounts['resolved'] ?? 0,
+        dismissed: statusCounts['dismissed'] ?? 0,
+      },
+      byType: {
+        video: typeCounts['video'] ?? 0,
+        comment: typeCounts['comment'] ?? 0,
+        user: typeCounts['user'] ?? 0,
+      },
+    };
+  }
 }
 
 export const moderationService = new ModerationService();

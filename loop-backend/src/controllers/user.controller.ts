@@ -2,10 +2,23 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AppError } from '../middleware/error.middleware';
 import { userService } from '../services/user.service';
+import { cacheService } from '../services/cache.service';
 
 const MAX_LIMIT = 100;
 const parseLimit = (raw: string | undefined, defaultVal = 20): number =>
   Math.min(Math.max(parseInt(raw || '', 10) || defaultVal, 1), MAX_LIMIT);
+const profileInvalidationPatterns = (req: AuthRequest, userId: string): string[] => {
+  const patterns = [
+    cacheService.patterns.userProfilesById(userId),
+    cacheService.patterns.allSearchResponses,
+  ];
+
+  if (req.user?.username) {
+    patterns.push(cacheService.patterns.userProfilesByUsername(req.user.username));
+  }
+
+  return patterns;
+};
 
 /**
  * GET /users/me
@@ -42,6 +55,22 @@ export const getUserByUsername = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * GET /users/:id/profile
+ * Get user profile by ID
+ */
+export const getUserByIdProfile = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const currentUserId = req.user?.userId;
+
+  const user = await userService.getUserById(id, currentUserId);
+
+  res.json({
+    success: true,
+    data: { user },
+  });
+};
+
+/**
  * PUT /users/me
  * Update current user profile
  */
@@ -53,6 +82,8 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
   }
 
   const user = await userService.updateProfile(userId, req.body);
+
+  await cacheService.invalidateByPatterns(profileInvalidationPatterns(req, userId));
 
   res.json({
     success: true,
@@ -74,6 +105,12 @@ export const followUser = async (req: AuthRequest, res: Response) => {
 
   await userService.followUser(followerId, username);
 
+  await cacheService.invalidateByPatterns([
+    cacheService.patterns.allFeedResponses,
+    cacheService.patterns.allUserProfiles,
+    cacheService.patterns.legacyFeedCache,
+  ]);
+
   res.json({
     success: true,
     message: 'User followed successfully',
@@ -93,6 +130,12 @@ export const unfollowUser = async (req: AuthRequest, res: Response) => {
   }
 
   await userService.unfollowUser(followerId, username);
+
+  await cacheService.invalidateByPatterns([
+    cacheService.patterns.allFeedResponses,
+    cacheService.patterns.allUserProfiles,
+    cacheService.patterns.legacyFeedCache,
+  ]);
 
   res.json({
     success: true,
@@ -220,6 +263,8 @@ export const uploadAvatar = async (req: AuthRequest, res: Response) => {
   if (req.file) {
     const avatarBuffer = Buffer.from(req.file.buffer);
     const avatarUrl = await userService.uploadAvatarFile(userId, avatarBuffer);
+
+    await cacheService.invalidateByPatterns(profileInvalidationPatterns(req, userId));
     
     return res.json({
       success: true,
@@ -248,6 +293,8 @@ export const uploadAvatar = async (req: AuthRequest, res: Response) => {
 
   await userService.updateAvatar(userId, avatarUrl);
 
+  await cacheService.invalidateByPatterns(profileInvalidationPatterns(req, userId));
+
   return res.json({
     success: true,
     message: 'Avatar updated successfully',
@@ -273,4 +320,3 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
     message: 'Account deleted successfully',
   });
 };
-

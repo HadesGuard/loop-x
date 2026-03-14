@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getCurrentUser,
+  getUserByIdProfile,
   getUserByUsername,
   updateProfile,
   followUser,
@@ -22,9 +23,11 @@ import {
 } from '../controllers/privacy.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { validate, validateParams } from '../middleware/validation.middleware';
+import { responseCache } from '../middleware/cache.middleware';
 import { updateProfileSchema, deleteAccountSchema } from '../validators/user.validator';
 import { privacySettingsSchema } from '../validators/privacy.validator';
-import { usernameParamSchema } from '../validators/params.validator';
+import { idParamSchema, usernameParamSchema } from '../validators/params.validator';
+import { cacheService } from '../services/cache.service';
 import { uploadAvatarMiddleware } from '../middleware/upload.middleware';
 
 const router: Router = Router();
@@ -45,7 +48,24 @@ router.get('/me/privacy-settings', getPrivacySettings);
 router.put('/me/privacy-settings', validate(privacySettingsSchema), updatePrivacySettings);
 
 // User profile routes (/:username is a wildcard — must come after /me/*)
-router.get('/:username', validateParams(usernameParamSchema), getUserByUsername);
+router.get(
+  '/:id/profile',
+  validateParams(idParamSchema),
+  responseCache({
+    ttlSeconds: 120,
+    key: (req) => cacheService.buildUserProfileByIdCacheKey(req),
+  }),
+  getUserByIdProfile
+);
+router.get(
+  '/:username',
+  validateParams(usernameParamSchema),
+  responseCache({
+    ttlSeconds: 120,
+    key: (req) => cacheService.buildUserProfileByUsernameCacheKey(req),
+  }),
+  getUserByUsername
+);
 router.get('/:username/videos', validateParams(usernameParamSchema), getUserVideos);
 router.get('/:username/followers', validateParams(usernameParamSchema), getUserFollowers);
 router.get('/:username/following', validateParams(usernameParamSchema), getUserFollowing);
@@ -60,4 +80,3 @@ router.post('/:username/block', validateParams(usernameParamSchema), blockUser);
 router.delete('/:username/block', validateParams(usernameParamSchema), unblockUser);
 
 export default router;
-

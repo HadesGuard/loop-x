@@ -1,0 +1,44 @@
+groups:
+  - name: loopx-alerts
+    interval: 30s
+    rules:
+      # 5xx spike from backend
+      - alert: Backend5xxSpike
+        expr: sum(rate(http_requests_total{status_code=~"5.."}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: High rate of 5xx responses
+          description: "5xx responses exceed 0.1 req/s over 5m."
+
+      # BullMQ queue backup (waiting jobs)
+      - alert: VideoQueueBacklog
+        expr: bullmq_queue_jobs{queue="video-processing",status="waiting"} > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Video processing queue is backing up
+          description: "Waiting jobs in video-processing queue exceed 100 for 5m."
+
+      # Backend memory pressure based on process RSS (> 1.5 GiB)
+      - alert: BackendMemoryHigh
+        expr: process_resident_memory_bytes > 1.5e9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Backend memory usage is high
+          description: "process_resident_memory_bytes above 1.5 GiB for 5 minutes."
+
+      # Disk pressure via cAdvisor (if present)
+      - alert: ContainerDiskHigh
+        expr: (container_fs_usage_bytes / container_fs_limit_bytes) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Container filesystem usage above 90%
+          description: "One or more containers exceed 90% filesystem usage."
+

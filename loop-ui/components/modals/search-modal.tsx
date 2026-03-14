@@ -43,6 +43,9 @@ export function SearchModal({ isOpen, onClose, onProfileSelect }: SearchModalPro
             views: v.views || 0,
             likes: v.likesCount || 0,
             commentsCount: v.commentsCount || 0,
+            sharesCount: v.sharesCount || 0,
+            duration: v.duration || null,
+            createdAt: v.createdAt,
             thumbnail: v.thumbnailUrl ?? undefined,
           })),
           hashtags: results.hashtags.map(h => ({

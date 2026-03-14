@@ -8,6 +8,9 @@ export interface Video {
   views: number
   likes: number
   commentsCount: number
+  sharesCount: number
+  duration: number | null
+  createdAt: string
   thumbnail?: string
 }
 

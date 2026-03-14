@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
 import { JwtPayload } from '../types/auth.types';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -24,7 +25,7 @@ export function generateRefreshToken(payload: Omit<JwtPayload, 'type'>): string 
   return jwt.sign(
     { ...payload, type: 'refresh' },
     JWT_REFRESH_SECRET,
-    { expiresIn: JWT_REFRESH_EXPIRES_IN }
+    { expiresIn: JWT_REFRESH_EXPIRES_IN, jwtid: randomUUID() }
   );
 }
 
@@ -63,4 +64,3 @@ export function verifyRefreshToken(token: string): JwtPayload {
     throw error;
   }
 }
-

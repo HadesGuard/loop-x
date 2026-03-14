@@ -21,14 +21,20 @@ import discoveryRoutes from './routes/discovery.routes';
 import conversationRoutes from './routes/conversation.routes';
 import notificationRoutes from './routes/notification.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import creatorRoutes from './routes/creator.routes';
 import watchHistoryRoutes from './routes/watch-history.routes';
 import reportRoutes from './routes/report.routes';
 import soundRoutes from './routes/sound.routes';
 import uploadRoutes from './routes/upload.routes';
+import adminRoutes from './routes/admin.routes';
+import tippingVideoRoutes from './routes/tipping.routes';
 import { WebSocketService } from './services/websocket.service';
 import { generalRateLimiter } from './middleware/rate-limit.middleware';
-// Import to initialize worker
+import { httpMetricsMiddleware, metricsHandler } from './metrics/http-metrics.middleware';
+import { startBullMqMetrics } from './metrics/bullmq.metrics';
+// Import to initialize workers and scheduled jobs
 import './queues/video-processing.queue';
+import { scheduleShelbyExpirationJob } from './queues/shelby-expiration.queue';
 
 // Load environment variables
 dotenv.config();
@@ -52,6 +58,11 @@ app.use(morgan('combined', {
 app.use(generalRateLimiter); // 100 req/min per IP
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Metrics should measure the full request lifecycle; register after parsers
+app.use(httpMetricsMiddleware);
+
+// Expose Prometheus metrics endpoint
+app.get('/metrics', metricsHandler);
 
 // Routes
 app.use('/health', healthRoutes);
@@ -66,10 +77,13 @@ app.use('/discover', discoveryRoutes);
 app.use('/conversations', conversationRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/analytics', analyticsRoutes);
+app.use('/creator', creatorRoutes);
 app.use('/watch-history', watchHistoryRoutes);
 app.use('/reports', reportRoutes);
 app.use('/sounds', soundRoutes);
 app.use('/uploads', uploadRoutes);
+app.use('/admin', adminRoutes);
+app.use('/videos', tippingVideoRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -82,6 +96,10 @@ async function startServer() {
     
     // Video processing worker is already initialized when imported
     logger.info('✅ Video processing worker initialized');
+
+    // Schedule daily Shelby blob expiration/renewal job
+    await scheduleShelbyExpirationJob();
+    logger.info('✅ Shelby expiration job scheduled');
     
     // Initialize WebSocket service
     const wsService = new WebSocketService(httpServer);
@@ -95,6 +113,9 @@ async function startServer() {
       logger.info(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`🔌 WebSocket available at ws://localhost:${PORT}/socket.io`);
     });
+
+    // Start BullMQ metrics collector (queue length + durations)
+    startBullMqMetrics({ queueName: 'video-processing' });
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);
@@ -107,4 +128,3 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export default app;
-

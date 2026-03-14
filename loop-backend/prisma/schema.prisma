@@ -49,6 +49,8 @@ model User {
   soundFavorites       SoundFavorite[]
   privacySettings      UserPrivacySettings?
   uploadSessions       UploadSession[]
+  tipsGiven            Tip[]                 @relation("TipSender")
+  tipsReceived         Tip[]                 @relation("TipReceiver")
 
   @@index([username])
   @@index([email])
@@ -90,6 +92,11 @@ model Video {
   shelbySize       BigInt? @map("shelby_size")
   shelbyChunksets  Int?    @map("shelby_chunksets")
 
+  // On-chain NFT fields (Aptos Digital Asset)
+  nftTokenAddress String?   @map("nft_token_address") @db.VarChar(255)
+  nftTxHash       String?   @map("nft_tx_hash") @db.VarChar(255)
+  nftMintedAt     DateTime? @map("nft_minted_at")
+
   // Relations
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   videoLikes     VideoLike[]
@@ -103,6 +110,7 @@ model Video {
   videoSounds    VideoSound[]
   videoRelations VideoRelation[]  @relation("OriginalVideo")
   relatedVideos  VideoRelation[]  @relation("RelatedVideo")
+  tips           Tip[]
 
   @@index([userId])
   @@index([createdAt])
@@ -575,4 +583,37 @@ model UploadSession {
   @@index([userId])
   @@index([status])
   @@map("upload_sessions")
+}
+
+model Tip {
+  id              String   @id @default(uuid()) @db.Uuid
+  /// Loop user who sent the tip (the viewer).
+  tipperId        String   @map("tipper_id") @db.Uuid
+  /// Loop user who received the tip (the creator).
+  creatorId       String   @map("creator_id") @db.Uuid
+  /// The video that prompted the tip.
+  videoId         String   @map("video_id") @db.Uuid
+  /// Gross amount in octas (1 APT = 100_000_000 octas).
+  grossAmountOctas BigInt  @map("gross_amount_octas")
+  /// Platform fee deducted in octas.
+  feeOctas        BigInt   @map("fee_octas")
+  /// Net amount received by the creator in octas.
+  netAmountOctas  BigInt   @map("net_amount_octas")
+  /// Platform fee rate applied (basis points).
+  feeBps          Int      @map("fee_bps")
+  /// On-chain transaction hash.
+  txHash          String   @map("tx_hash") @db.VarChar(100)
+  /// On-chain address of the tipping contract used.
+  contractAddress String   @map("contract_address") @db.VarChar(100)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tipper  User  @relation("TipSender",   fields: [tipperId],   references: [id], onDelete: Cascade)
+  creator User  @relation("TipReceiver", fields: [creatorId],  references: [id], onDelete: Cascade)
+  video   Video @relation(fields: [videoId], references: [id],  onDelete: Cascade)
+
+  @@index([tipperId])
+  @@index([creatorId])
+  @@index([videoId])
+  @@index([createdAt])
+  @@map("tips")
 }

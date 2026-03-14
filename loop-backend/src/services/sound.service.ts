@@ -1,5 +1,6 @@
 import { prisma } from '../config/database';
 import { AppError } from '../middleware/error.middleware';
+import { toPublicMediaUrl } from '../utils/cdn.util';
 
 export class SoundService {
   /**
@@ -96,8 +97,8 @@ export class SoundService {
           isVerified: sound.user.isVerified,
         },
         duration: sound.duration,
-        url: sound.url,
-        thumbnail: sound.thumbnailUrl,
+        url: toPublicMediaUrl(sound.url) || sound.url,
+        thumbnail: toPublicMediaUrl(sound.thumbnailUrl),
         genre: sound.genre,
         totalVideos: sound.totalVideos,
         totalViews: sound.totalViews.toString(),
@@ -159,8 +160,8 @@ export class SoundService {
         isVerified: sound.user.isVerified,
       },
       duration: sound.duration,
-      url: sound.url,
-      thumbnail: sound.thumbnailUrl,
+      url: toPublicMediaUrl(sound.url) || sound.url,
+      thumbnail: toPublicMediaUrl(sound.thumbnailUrl),
       genre: sound.genre,
       tags: sound.tags,
       totalVideos: sound.totalVideos,
@@ -239,7 +240,7 @@ export class SoundService {
       },
       videos: videos.map((video) => ({
         id: video.id,
-        thumbnail: video.thumbnailUrl,
+        thumbnail: toPublicMediaUrl(video.thumbnailUrl),
         caption: video.title,
         username: video.user.username,
         views: video.views.toString(),
@@ -328,8 +329,8 @@ export class SoundService {
         artist: fav.sound.artist || `@${fav.sound.user.username}`,
         artistId: fav.sound.userId,
         duration: fav.sound.duration,
-        url: fav.sound.url,
-        thumbnail: fav.sound.thumbnailUrl,
+        url: toPublicMediaUrl(fav.sound.url) || fav.sound.url,
+        thumbnail: toPublicMediaUrl(fav.sound.thumbnailUrl),
         genre: fav.sound.genre,
         totalVideos: fav.sound.totalVideos,
         totalViews: fav.sound.totalViews.toString(),
@@ -398,8 +399,8 @@ export class SoundService {
         title: sound.title,
         artist: sound.artist || `@${sound.user.username}`,
         duration: sound.duration,
-        url: sound.url,
-        thumbnail: sound.thumbnailUrl,
+        url: toPublicMediaUrl(sound.url) || sound.url,
+        thumbnail: toPublicMediaUrl(sound.thumbnailUrl),
         genre: sound.genre,
         totalVideos: sound.totalVideos,
         totalViews: sound.totalViews.toString(),
@@ -456,5 +457,4 @@ export class SoundService {
 }
 
 export const soundService = new SoundService();
-
 

@@ -312,6 +312,56 @@ export class AnalyticsService {
   }
 
   /**
+   * Get full creator dashboard data (overview + top videos)
+   */
+  async getCreatorDashboard(userId: string) {
+    const overview = await this.getOverview(userId);
+
+    // Get top 5 videos by views
+    const topVideos = await prisma.video.findMany({
+      where: { userId, status: 'ready' },
+      orderBy: { views: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        title: true,
+        thumbnailUrl: true,
+        views: true,
+        likesCount: true,
+        commentsCount: true,
+        sharesCount: true,
+        duration: true,
+        createdAt: true,
+      },
+    });
+
+    // Get views over last 30 days across all creator videos
+    const startDate = startOfDay(subDays(new Date(), 30));
+    const dailyAnalytics = await prisma.videoAnalytics.findMany({
+      where: {
+        video: { userId },
+        date: { gte: startDate },
+      },
+      select: { date: true, views: true },
+      orderBy: { date: 'asc' },
+    });
+
+    // Aggregate by date
+    const viewsByDateMap = new Map<string, number>();
+    for (const entry of dailyAnalytics) {
+      const key = format(entry.date, 'yyyy-MM-dd');
+      viewsByDateMap.set(key, (viewsByDateMap.get(key) || 0) + entry.views);
+    }
+    const viewsByDay = Array.from(viewsByDateMap.entries()).map(([date, views]) => ({ date, views }));
+
+    return {
+      ...overview,
+      topVideos,
+      viewsByDay,
+    };
+  }
+
+  /**
    * Get views by day for a video
    */
   private async getViewsByDay(videoId: string, days: number = 30) {

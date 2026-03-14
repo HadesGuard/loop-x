@@ -3,8 +3,10 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import { AppError } from '../middleware/error.middleware';
 import { videoService } from '../services/video.service';
 import { analyticsService } from '../services/analytics.service';
+import { cacheService } from '../services/cache.service';
 import { prisma } from '../config/database';
 import { Readable } from 'stream';
+import { shelbyToHttpUrl } from '../utils/cdn.util';
 import { logger } from '../utils/logger';
 
 /**
@@ -38,6 +40,12 @@ export const uploadVideo = async (req: AuthRequest, res: Response) => {
     metadata,
     req.file.size
   );
+
+  await cacheService.invalidateByPatterns([
+    cacheService.patterns.allFeedResponses,
+    cacheService.patterns.allSearchResponses,
+    cacheService.patterns.legacyFeedCache,
+  ]);
 
   res.status(201).json({
     success: true,
@@ -76,6 +84,13 @@ export const updateVideo = async (req: AuthRequest, res: Response) => {
 
   const video = await videoService.updateVideo(id, userId, req.body);
 
+  await cacheService.invalidateByPatterns([
+    cacheService.patterns.videoById(id),
+    cacheService.patterns.allFeedResponses,
+    cacheService.patterns.allSearchResponses,
+    cacheService.patterns.legacyFeedCache,
+  ]);
+
   res.json({
     success: true,
     message: 'Video updated successfully',
@@ -96,6 +111,13 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
   }
 
   await videoService.deleteVideo(id, userId);
+
+  await cacheService.invalidateByPatterns([
+    cacheService.patterns.videoById(id),
+    cacheService.patterns.allFeedResponses,
+    cacheService.patterns.allSearchResponses,
+    cacheService.patterns.legacyFeedCache,
+  ]);
 
   res.json({
     success: true,
@@ -173,10 +195,12 @@ export const streamHLS = async (req: AuthRequest, res: Response) => {
   }
 
   if (video.hlsManifestUrl) {
+    // Prefer CDN/gateway URL if configured
+    const publicUrl = shelbyToHttpUrl(video.hlsManifestUrl) || video.hlsManifestUrl;
     res.json({
       success: true,
       data: {
-        hlsUrl: video.hlsManifestUrl,
+        hlsUrl: publicUrl,
         type: 'hls',
       },
     });
@@ -191,4 +215,3 @@ export const streamHLS = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-

@@ -32,6 +32,9 @@ export function transformVideo(beVideo: ApiVideoResponse, user?: ApiUserResponse
     views: beVideo.views || 0,
     likes: beVideo.likesCount || 0,
     commentsCount: beVideo.commentsCount || 0,
+    sharesCount: beVideo.sharesCount || 0,
+    duration: beVideo.duration || null,
+    createdAt: beVideo.createdAt,
     thumbnail: beVideo.thumbnailUrl || undefined,
   };
 }

@@ -619,4 +619,3 @@ export class InteractionService {
 }
 
 export const interactionService = new InteractionService();
-

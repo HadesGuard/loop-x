@@ -36,5 +36,9 @@ export interface VideoResponse {
   shelbyExpiration: string | null;
   shelbySize: number | null;
   shelbyChunksets: number | null;
+  // On-chain NFT fields
+  nftTokenAddress: string | null;
+  nftTxHash: string | null;
+  nftMintedAt: Date | null;
 }
 

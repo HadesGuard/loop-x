@@ -1,6 +1,7 @@
 import { prisma } from '../config/database';
 import { FeedItem } from '../types/feed.types';
 import { formatCount } from '../utils/format';
+import { toPublicMediaUrl } from '../utils/cdn.util';
 
 export class DiscoveryService {
   /**
@@ -77,8 +78,8 @@ export class DiscoveryService {
     const formattedVideos: FeedItem[] = videosToReturn.map((video) => ({
       id: video.id,
       userId: video.userId,
-      url: video.url,
-      thumbnailUrl: video.thumbnailUrl,
+      url: toPublicMediaUrl(video.url) || video.url,
+      thumbnailUrl: toPublicMediaUrl(video.thumbnailUrl),
       title: video.title,
       description: video.description,
       views: Number(video.views),
@@ -100,6 +101,9 @@ export class DiscoveryService {
       shelbyExpiration: video.shelbyExpiration ? video.shelbyExpiration.toString() : null,
       shelbySize: video.shelbySize ? Number(video.shelbySize) : null,
       shelbyChunksets: video.shelbyChunksets,
+      nftTokenAddress: video.nftTokenAddress ?? null,
+      nftTxHash: video.nftTxHash ?? null,
+      nftMintedAt: video.nftMintedAt ?? null,
       user: {
         id: video.user.id,
         username: video.user.username,
@@ -214,4 +218,3 @@ export class DiscoveryService {
 }
 
 export const discoveryService = new DiscoveryService();
-

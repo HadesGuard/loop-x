@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "load-testing": "tsx load-tests/run-load-tests.ts",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "type-check": "tsc --noEmit"
@@ -49,6 +50,7 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "redis": "^4.6.11",
+    "prom-client": "^15.1.0",
     "socket.io": "^4.5.4",
     "tweetnacl": "^1.0.3",
     "uuid": "^13.0.0",

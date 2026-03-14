@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { uploadVideo, getVideo, updateVideo, deleteVideo, streamVideo, streamHLS } from '../controllers/video.controller';
+import { getForYouFeed } from '../controllers/feed.controller';
 import { getVideoAnalytics } from '../controllers/analytics.controller';
 import {
   likeVideo,
@@ -11,12 +12,15 @@ import {
   addComment,
 } from '../controllers/interaction.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { validate, validateParams } from '../middleware/validation.middleware';
+import { validate, validateParams, validateQuery } from '../middleware/validation.middleware';
+import { responseCache } from '../middleware/cache.middleware';
 import { uploadVideoSchema, updateVideoSchema } from '../validators/video.validator';
 import { shareVideoSchema, addCommentSchema, getCommentsQuerySchema } from '../validators/interaction.validator';
 import { idParamSchema } from '../validators/params.validator';
+import { feedQuerySchema } from '../validators/feed.validator';
 import { trackViewSchema } from '../validators/analytics.validator';
 import { trackView } from '../controllers/analytics.controller';
+import { cacheService } from '../services/cache.service';
 import {
   createDuet,
   createStitch,
@@ -25,6 +29,7 @@ import {
   getDuetInfo,
   getStitchInfo,
 } from '../controllers/duet-stitch.controller';
+import { mintVideoNft } from '../controllers/nft.controller';
 import { uploadVideoMiddleware } from '../middleware/upload.middleware';
 import { uploadRateLimiter } from '../middleware/rate-limit.middleware';
 
@@ -42,8 +47,27 @@ router.post(
   uploadVideo
 );
 
+// Get "For You" feed (alias for /feed)
+router.get(
+  '/feed',
+  validateQuery(feedQuerySchema),
+  responseCache({
+    ttlSeconds: 30,
+    key: (req) => cacheService.buildFeedCacheKey(req),
+  }),
+  getForYouFeed
+);
+
 // Get video
-router.get('/:id', validateParams(idParamSchema), getVideo);
+router.get(
+  '/:id',
+  validateParams(idParamSchema),
+  responseCache({
+    ttlSeconds: 60,
+    key: (req) => cacheService.buildVideoDetailCacheKey(req),
+  }),
+  getVideo
+);
 
 // Update video metadata
 router.put('/:id', validateParams(idParamSchema), validate(updateVideoSchema), updateVideo);
@@ -74,6 +98,9 @@ router.post('/:id/share', validateParams(idParamSchema), validate(shareVideoSche
 router.get('/:id/comments', validateParams(idParamSchema), validate(getCommentsQuerySchema, 'query'), getComments);
 router.post('/:id/comments', validateParams(idParamSchema), validate(addCommentSchema), addComment);
 
+// NFT minting
+router.post('/:id/mint', validateParams(idParamSchema), mintVideoNft);
+
 // Duet & Stitch
 router.post('/:id/duet', validateParams(idParamSchema), uploadVideoMiddleware, createDuet);
 router.get('/:id/duets', validateParams(idParamSchema), getDuets);
@@ -83,4 +110,3 @@ router.get('/:id/stitches', validateParams(idParamSchema), getStitches);
 router.get('/:id/stitch-info', validateParams(idParamSchema), getStitchInfo);
 
 export default router;
-

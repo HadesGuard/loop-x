@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: loop_user
+          POSTGRES_PASSWORD: loop_password
+          POSTGRES_DB: loop_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U loop_user" \
+          --health-interval 10s \
+          --health-timeout 5s \
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping" \
+          --health-interval 10s \
+          --health-timeout 5s \
+          --health-retries 5
+
+    env:
+      # Point app to CI services
+      DATABASE_URL: postgresql://loop_user:loop_password@localhost:5432/loop_db
+      REDIS_URL: redis://localhost:6379
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install dependencies
+        working-directory: loop-backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        working-directory: loop-backend
+        run: pnpm prisma generate
+
+      - name: Lint
+        working-directory: loop-backend
+        run: pnpm lint
+
+      - name: Type Check
+        working-directory: loop-backend
+        run: pnpm type-check
+
+      - name: Run Unit Tests
+        working-directory: loop-backend
+        run: pnpm test
+
+      - name: Build
+        working-directory: loop-backend
+        run: pnpm build

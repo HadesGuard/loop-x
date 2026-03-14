@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useCallback } from "react"
+import React, { useEffect, useRef, useCallback, useState } from "react"
 import {
   Heart,
   MessageCircle,
@@ -10,6 +10,9 @@ import {
   AlertCircle,
   Music,
   User,
+  Maximize2,
+  Volume2,
+  VolumeX,
 } from "lucide-react"
 import type { Video } from "@/types/video"
 import { formatViews } from "@/lib/format"
@@ -91,6 +94,9 @@ export const VideoItemInline = React.memo(function VideoItemInline({
 }: VideoItemInlineProps) {
   const hlsRef = useRef<import("hls.js").default | null>(null)
   const localVideoRef = useRef<HTMLVideoElement | null>(null)
+  const [isBuffering, setIsBuffering] = useState(false)
+  const [availableLevels, setAvailableLevels] = useState<number[]>([])
+  const [localVolume, setLocalVolume] = useState(0.8)
 
   const setVideoRef = useCallback(
     (el: HTMLVideoElement | null) => {
@@ -126,6 +132,15 @@ export const VideoItemInline = React.memo(function VideoItemInline({
         lowLatencyMode: false,
       })
       hlsRef.current = hls
+
+      hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+        const heights = (data.levels as { height: number }[])
+          .map((l) => l.height)
+          .filter((h) => h > 0)
+          .sort((a, b) => b - a)
+        setAvailableLevels(heights)
+      })
+
       hls.loadSource(video.hlsUrl!)
       hls.attachMedia(videoEl)
     }).catch(() => {
@@ -137,8 +152,43 @@ export const VideoItemInline = React.memo(function VideoItemInline({
         hlsRef.current.destroy()
         hlsRef.current = null
       }
+      setAvailableLevels([])
     }
   }, [video.hlsUrl, video.url])
+
+  // Apply HLS quality level when videoQuality changes
+  useEffect(() => {
+    const hls = hlsRef.current
+    if (!hls) return
+    const quality = videoQuality[video.id] || "Auto"
+    if (quality === "Auto") {
+      hls.currentLevel = -1
+    } else {
+      const targetHeight = parseInt(quality)
+      const levelIndex = hls.levels?.findIndex((l) => l.height === targetHeight) ?? -1
+      if (levelIndex !== -1) {
+        hls.currentLevel = levelIndex
+      }
+    }
+  }, [videoQuality, video.id])
+
+  // Sync local volume to video element
+  useEffect(() => {
+    const videoEl = localVideoRef.current
+    if (videoEl) {
+      videoEl.volume = localVolume
+    }
+  }, [localVolume])
+
+  const toggleFullscreen = useCallback(() => {
+    const videoEl = localVideoRef.current
+    if (!videoEl) return
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    } else {
+      videoEl.requestFullscreen().catch(() => {})
+    }
+  }, [])
 
   return (
     <div key={`${video.id}-${index}`} className="relative w-full h-screen snap-start snap-always bg-black">
@@ -151,13 +201,25 @@ export const VideoItemInline = React.memo(function VideoItemInline({
         loop
         muted={isMuted}
         playsInline
+        preload="metadata"
         onClick={() => onDoubleTap(video.id)}
+        onWaiting={() => setIsBuffering(true)}
+        onPlaying={() => setIsBuffering(false)}
+        onCanPlay={() => setIsBuffering(false)}
+        onStalled={() => setIsBuffering(true)}
         onError={(e) => {
           console.error(`Video ${video.id} load error:`, e)
+          setIsBuffering(false)
         }}
       />
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+
+      {isBuffering && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+          <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+        </div>
+      )}
 
       {doubleTapHearts[video.id] && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
@@ -222,7 +284,7 @@ export const VideoItemInline = React.memo(function VideoItemInline({
               />
             </div>
 
-            {/* Control buttons */}
+            {/* Control buttons row 1: transport controls */}
             <div className="flex items-center justify-center gap-3">
               {/* Playback speed */}
               <div className="relative group">
@@ -303,29 +365,59 @@ export const VideoItemInline = React.memo(function VideoItemInline({
                 </svg>
               </button>
 
-              {/* Quality selector */}
-              <div className="relative group">
-                <button className="px-4 py-2 bg-white/20 backdrop-blur-md rounded-lg text-white text-sm font-medium hover:bg-white/30 transition-all border border-white/20">
-                  {videoQuality[video.id] || "Auto"}
-                </button>
-                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block">
-                  <div className="bg-black/90 backdrop-blur-md rounded-lg p-2 space-y-1 border border-white/10 whitespace-nowrap">
-                    {["Auto", "1080p", "720p", "480p", "360p"].map((quality) => (
-                      <button
-                        key={quality}
-                        onClick={() => onSetVideoQuality((prev) => ({ ...prev, [video.id]: quality }))}
-                        className={`w-full px-3 py-1.5 text-sm rounded transition-colors ${
-                          (videoQuality[video.id] || "Auto") === quality
-                            ? "bg-white/20 text-white"
-                            : "text-white/70 hover:bg-white/10 hover:text-white"
-                        }`}
-                      >
-                        {quality}
-                      </button>
-                    ))}
+              {/* Quality selector — only shown when multiple renditions available */}
+              {availableLevels.length > 1 && (
+                <div className="relative group">
+                  <button className="px-4 py-2 bg-white/20 backdrop-blur-md rounded-lg text-white text-sm font-medium hover:bg-white/30 transition-all border border-white/20">
+                    {videoQuality[video.id] || "Auto"}
+                  </button>
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block">
+                    <div className="bg-black/90 backdrop-blur-md rounded-lg p-2 space-y-1 border border-white/10 whitespace-nowrap">
+                      {["Auto", ...availableLevels.map((h) => `${h}p`)].map((quality) => (
+                        <button
+                          key={quality}
+                          onClick={() => onSetVideoQuality((prev) => ({ ...prev, [video.id]: quality }))}
+                          className={`w-full px-3 py-1.5 text-sm rounded transition-colors ${
+                            (videoQuality[video.id] || "Auto") === quality
+                              ? "bg-white/20 text-white"
+                              : "text-white/70 hover:bg-white/10 hover:text-white"
+                          }`}
+                        >
+                          {quality}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Fullscreen */}
+              <button
+                onClick={toggleFullscreen}
+                className="p-3 bg-white/20 backdrop-blur-md rounded-lg hover:bg-white/30 transition-all border border-white/20"
+              >
+                <Maximize2 className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            {/* Volume control */}
+            <div className="flex items-center gap-3 px-2">
+              <button
+                onClick={() => setLocalVolume((v) => (v > 0 ? 0 : 0.8))}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                {localVolume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={localVolume}
+                onChange={(e) => setLocalVolume(Number(e.target.value))}
+                className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-pointer"
+              />
+              <span className="text-white/60 text-xs w-8 text-right">{Math.round(localVolume * 100)}%</span>
             </div>
           </div>
         </div>

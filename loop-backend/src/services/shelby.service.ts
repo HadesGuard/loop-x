@@ -274,6 +274,29 @@ export class ShelbyService {
     logger.info(`Shelby renewal complete: ${renewed} renewed, ${failed} failed`);
     return { renewed, failed };
   }
+
+  /**
+   * Mark videos as expired when Shelby blob expiration has passed.
+   */
+  async markExpiredBlobs(): Promise<number> {
+    const nowMicros = BigInt(Date.now() * 1000);
+    const result = await prisma.video.updateMany({
+      where: {
+        status: 'ready',
+        shelbyBlobName: { not: null },
+        shelbyExpiration: { not: null, lte: nowMicros },
+      },
+      data: {
+        status: 'expired',
+      },
+    });
+
+    if (result.count > 0) {
+      logger.info(`Shelby expiration: marked ${result.count} video(s) as expired`);
+    }
+
+    return result.count;
+  }
 }
 
 export const shelbyService = new ShelbyService();

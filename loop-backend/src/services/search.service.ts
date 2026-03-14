@@ -1,5 +1,6 @@
 import { prisma } from '../config/database';
 import { AppError } from '../middleware/error.middleware';
+import { toPublicMediaUrl } from '../utils/cdn.util';
 
 /**
  * Format large numbers (e.g., 2400000 -> "2.4M")
@@ -139,7 +140,7 @@ export class SearchService {
 
       results.videos = videos.map((video) => ({
         id: video.id,
-        thumbnail: video.thumbnailUrl || null,
+        thumbnail: toPublicMediaUrl(video.thumbnailUrl),
         caption: video.title || video.description || '',
         username: `@${video.user.username}`,
         views: formatCount(video.views),
@@ -191,4 +192,3 @@ export class SearchService {
 }
 
 export const searchService = new SearchService();
-

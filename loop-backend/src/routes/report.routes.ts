@@ -3,6 +3,7 @@ import { createReport } from '../controllers/privacy.controller';
 import {
   getReports,
   getReportById,
+  getReportStats,
   reviewReport,
   takeAction,
 } from '../controllers/moderation.controller';
@@ -25,6 +26,7 @@ router.use(authenticate);
 router.post('/', validate(reportSchema), createReport);
 
 // Admin-only routes
+router.get('/stats', isAdmin, getReportStats);
 router.get('/', isAdmin, validateQuery(listReportsQuerySchema), getReports);
 router.get('/:id', isAdmin, getReportById);
 router.put('/:id', isAdmin, validate(reviewReportSchema), reviewReport);

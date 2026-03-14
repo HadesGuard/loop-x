@@ -148,12 +148,17 @@ export class PrivacyService {
   }
 
   /**
-   * Report a user or video
+   * Auto-hide threshold: if a content item receives this many reports, it's hidden automatically.
+   */
+  static readonly REPORT_AUTO_HIDE_THRESHOLD = 3;
+
+  /**
+   * Report a user, video, or comment
    */
   async createReport(
     reporterId: string,
     data: {
-      type: 'user' | 'video';
+      type: 'user' | 'video' | 'comment';
       targetId: string;
       reason: string;
       description?: string;
@@ -179,6 +184,14 @@ export class PrivacyService {
 
       if (!video) {
         throw new AppError('Video not found', 404, 'VIDEO_NOT_FOUND');
+      }
+    } else if (data.type === 'comment') {
+      const comment = await prisma.comment.findUnique({
+        where: { id: data.targetId },
+      });
+
+      if (!comment) {
+        throw new AppError('Comment not found', 404, 'COMMENT_NOT_FOUND');
       }
     }
 
@@ -210,6 +223,40 @@ export class PrivacyService {
     });
 
     logger.info(`User ${reporterId} reported ${data.type} ${data.targetId}`);
+
+    // Auto-hide check: count pending reports for this target
+    await this._checkAutoHideThreshold(data.type, data.targetId);
+  }
+
+  /**
+   * Check if a reported item has crossed the auto-hide threshold and hide it if so.
+   */
+  private async _checkAutoHideThreshold(
+    type: 'user' | 'video' | 'comment',
+    targetId: string
+  ): Promise<void> {
+    const reportCount = await prisma.report.count({
+      where: {
+        type,
+        targetId,
+        status: 'pending',
+      },
+    });
+
+    if (reportCount < PrivacyService.REPORT_AUTO_HIDE_THRESHOLD) {
+      return;
+    }
+
+    if (type === 'video') {
+      await prisma.video.updateMany({
+        where: { id: targetId, status: { not: 'removed' } },
+        data: { status: 'hidden' },
+      });
+      logger.info(
+        `Auto-hidden video ${targetId} after ${reportCount} reports`
+      );
+    }
+    // Users and comments are not auto-hidden; they require manual admin review.
   }
 
   /**

@@ -110,6 +110,9 @@ export class HashtagService {
       shelbyExpiration: vh.video.shelbyExpiration ? vh.video.shelbyExpiration.toString() : null,
       shelbySize: vh.video.shelbySize ? Number(vh.video.shelbySize) : null,
       shelbyChunksets: vh.video.shelbyChunksets,
+      nftTokenAddress: vh.video.nftTokenAddress ?? null,
+      nftTxHash: vh.video.nftTxHash ?? null,
+      nftMintedAt: vh.video.nftMintedAt ?? null,
       user: {
         id: vh.video.user.id,
         username: vh.video.user.username,

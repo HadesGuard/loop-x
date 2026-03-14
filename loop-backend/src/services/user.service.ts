@@ -123,6 +123,75 @@ export class UserService {
   }
 
   /**
+   * Get user profile by user ID
+   */
+  async getUserById(
+    userId: string,
+    currentUserId?: string
+  ): Promise<UserProfileWithStats> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        fullName: true,
+        avatarUrl: true,
+        bio: true,
+        website: true,
+        isVerified: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    }
+
+    if (!user.isActive) {
+      throw new AppError('User account is deactivated', 403, 'ACCOUNT_DEACTIVATED');
+    }
+
+    const [followersCount, followingCount, videosCount] = await Promise.all([
+      prisma.follow.count({
+        where: { followingId: user.id },
+      }),
+      prisma.follow.count({
+        where: { followerId: user.id },
+      }),
+      prisma.video.count({
+        where: { userId: user.id, status: 'ready' },
+      }),
+    ]);
+
+    let isFollowing = false;
+    if (currentUserId && currentUserId !== user.id) {
+      const follow = await prisma.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: currentUserId,
+            followingId: user.id,
+          },
+        },
+      });
+      isFollowing = !!follow;
+    }
+
+    const { email, ...publicUser } = user;
+    const profile = currentUserId === user.id ? user : publicUser;
+
+    return {
+      ...profile,
+      followersCount,
+      followingCount,
+      videosCount,
+      isFollowing,
+    };
+  }
+
+  /**
    * Update user profile
    */
   async updateProfile(
@@ -621,4 +690,3 @@ export class UserService {
 }
 
 export const userService = new UserService();
-

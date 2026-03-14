@@ -200,6 +200,12 @@ export default function VideoFeedPage() {
               video.play().catch(() => {})
               setIsPlaying((prev) => ({ ...prev, [videoId]: true }))
             }
+            // Preload the next video in the feed
+            const currentIndex = videoRefs.current.indexOf(video)
+            const nextVideo = videoRefs.current[currentIndex + 1]
+            if (nextVideo && nextVideo.preload !== "auto") {
+              nextVideo.preload = "auto"
+            }
           } else {
             video.pause()
             if (videoId) {
